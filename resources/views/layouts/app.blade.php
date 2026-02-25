@@ -87,74 +87,59 @@
                 </div>
             </div>
 
-            <!-- Navigation -->
+            <!-- Navigation - Berdasarkan Role -->
             <nav class="p-4 space-y-1">
-                <!-- Common Links (semua user) -->
-                <a href="{{ route('dashboard') }}"
-                    class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-                    <span>Dashboard</span>
-                </a>
-
-                <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    Manajemen
-                </div>
-
-                <!-- Menu Links (semua user bisa lihat) -->
-                <a href="{{ route('menus.index') }}"
-                    class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 {{ request()->routeIs('menus.*') ? 'active' : '' }}">
-                    <i data-lucide="utensils" class="w-5 h-5"></i>
-                    <span>Menu</span>
-                </a>
-
                 @if (Auth::user()->isOwner())
-                    <!-- Owner Only Links -->
+                    {{-- NAVIGASI UNTUK OWNER --}}
+
+                    <!-- Dashboard -->
+                    <a href="{{ route('dashboard') }}"
+                        class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                        <span>Dashboard</span>
+                    </a>
+
+                    <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        Manajemen
+                    </div>
+
+                    <!-- Menu Management -->
+                    <a href="{{ route('menus.index') }}"
+                        class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 {{ request()->routeIs('menus.*') ? 'active' : '' }}">
+                        <i data-lucide="utensils" class="w-5 h-5"></i>
+                        <span>Manajemen Menu</span>
+                    </a>
+
+                    <!-- Ingredients Management -->
                     <a href="{{ route('ingredients.index') }}"
                         class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 {{ request()->routeIs('ingredients.*') ? 'active' : '' }}">
                         <i data-lucide="package" class="w-5 h-5"></i>
                         <span>Bahan Baku</span>
                     </a>
-                @endif
 
-                <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    Transaksi
-                </div>
+                    <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        Transaksi
+                    </div>
 
-                @if (Auth::user()->isOwner())
-                    <!-- Owner: Sales Management -->
+                    <!-- Sales Management (Kelola Pesanan) -->
                     <a href="{{ route('sales.index') }}"
                         class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 {{ request()->routeIs('sales.*') ? 'active' : '' }}">
                         <i data-lucide="shopping-cart" class="w-5 h-5"></i>
                         <span>Kelola Pesanan</span>
                     </a>
 
-                    <!-- Restocks - Owner Only -->
+                    <!-- Restocks -->
                     <a href="{{ route('restocks.index') }}"
                         class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 {{ request()->routeIs('restocks.*') ? 'active' : '' }}">
                         <i data-lucide="truck" class="w-5 h-5"></i>
                         <span>Restock</span>
                     </a>
-                @else
-                    <!-- User: Order -->
-                    <a href="{{ route('orders.create') }}"
-                        class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 {{ request()->routeIs('orders.create') ? 'active' : '' }}">
-                        <i data-lucide="plus-circle" class="w-5 h-5"></i>
-                        <span>Pesan Menu</span>
-                    </a>
 
-                    <a href="{{ route('orders.index') }}"
-                        class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 {{ request()->routeIs('orders.index') || request()->routeIs('orders.show') ? 'active' : '' }}">
-                        <i data-lucide="shopping-bag" class="w-5 h-5"></i>
-                        <span>Pesanan Saya</span>
-                    </a>
-                @endif
-
-                <!-- Reports - Owner Only -->
-                @if (Auth::user()->isOwner())
                     <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                         Laporan
                     </div>
 
+                    <!-- Reports -->
                     <a href="{{ route('reports.income') }}"
                         class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 {{ request()->routeIs('reports.income') ? 'active' : '' }}">
                         <i data-lucide="trending-up" class="w-5 h-5"></i>
@@ -178,10 +163,50 @@
                         <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
                         <span>Laporan Stok</span>
                     </a>
+
+                @else
+                    {{-- NAVIGASI UNTUK USER --}}
+
+                    <!-- Dashboard User -->
+                    <a href="{{ route('dashboard') }}"
+                        class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                        <span>Dashboard</span>
+                    </a>
+
+                    <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        Menu
+                    </div>
+
+                    <!-- Daftar Menu (Hanya untuk melihat menu yang tersedia) -->
+                    <a href="{{ route('menus.index') }}"
+                        class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 {{ request()->routeIs('menus.index') ? 'active' : '' }}">
+                        <i data-lucide="utensils" class="w-5 h-5"></i>
+                        <span>Daftar Menu</span>
+                    </a>
+
+                    <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        Pesanan
+                    </div>
+
+                    <!-- Buat Pesanan Baru -->
+                    <a href="{{ route('orders.create') }}"
+                        class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 {{ request()->routeIs('orders.create') ? 'active' : '' }}">
+                        <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                        <span>Pesan Menu</span>
+                    </a>
+
+                    <!-- Riwayat Pesanan -->
+                    <a href="{{ route('orders.index') }}"
+                        class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 {{ request()->routeIs('orders.index') || request()->routeIs('orders.show') ? 'active' : '' }}">
+                        <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+                        <span>Riwayat Pesanan</span>
+                    </a>
+
                 @endif
             </nav>
 
-            <!-- User Profile -->
+            <!-- User Profile (Sama untuk semua role) -->
             <div class="absolute bottom-0 w-full p-4 border-t">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
