@@ -9,6 +9,7 @@ use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\RestockController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\OrderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,6 +50,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{menu}', [MenuController::class, 'destroy'])->name('destroy');
         Route::post('/{menu}/toggle-status', [MenuController::class, 'toggleStatus'])->name('toggle-status');
         Route::get('/get/details', [MenuController::class, 'getMenuDetails'])->name('get.details');
+        Route::get('/{menu}/manage-sauces', [MenuController::class, 'manageSauces'])->name('manage-sauces');
+        Route::post('/{menu}/update-sauces', [MenuController::class, 'updateSauces'])->name('update-sauces');
     });
 
     // ==================== INGREDIENT MANAGEMENT ====================
@@ -67,7 +70,6 @@ Route::middleware('auth')->group(function () {
 
     // ==================== SALES MANAGEMENT ====================
     // ROUTE KHUSUS UNTUK REPORT - DILUAR PREFIX GROUP
-    // Ini adalah SOLUSI PALING AMAN - letakkan di luar prefix group
     Route::get('/sales/daily-report', [SaleController::class, 'getDailyReport'])->name('sales.daily-report');
     Route::get('/sales/daily-report/print', [SaleController::class, 'printDailyReport'])->name('sales.daily-report.print');
 
@@ -77,15 +79,28 @@ Route::middleware('auth')->group(function () {
         Route::get('/create', [SaleController::class, 'create'])->name('create');
         Route::post('/', [SaleController::class, 'store'])->name('store');
         Route::get('/{sale}', [SaleController::class, 'show'])->name('show');
+        Route::get('/{sale}/process', [SaleController::class, 'process'])->name('process');
+        Route::post('/{sale}/accept', [SaleController::class, 'accept'])->name('accept');
+        Route::post('/{sale}/complete', [SaleController::class, 'complete'])->name('complete');
+        Route::post('/{sale}/reject', [SaleController::class, 'reject'])->name('reject');
+        Route::post('/{sale}/mark-as-paid', [SaleController::class, 'markAsPaid'])->name('mark-as-paid'); // TAMBAHKAN INI
         Route::delete('/{sale}', [SaleController::class, 'destroy'])->name('destroy');
         Route::post('/add-item', [SaleController::class, 'addItem'])->name('add-item');
         Route::delete('/remove-item/{id}', [SaleController::class, 'removeItem'])->name('remove-item');
         Route::get('/{sale}/print', [SaleController::class, 'printReceipt'])->name('print');
     });
 
+    // ==================== ORDERS MANAGEMENT (UNTUK USER) ====================
+    Route::prefix('orders')->name('orders.')->group(function () {
+        Route::get('/', [OrderController::class, 'index'])->name('index');
+        Route::get('/create', [OrderController::class, 'create'])->name('create');
+        Route::post('/', [OrderController::class, 'store'])->name('store');
+        Route::get('/{order}', [OrderController::class, 'show'])->name('show');
+        Route::delete('/{order}/cancel', [OrderController::class, 'cancel'])->name('cancel');
+    });
+
     // ==================== RESTOCK MANAGEMENT ====================
     // ROUTE KHUSUS UNTUK REPORT - DILUAR PREFIX GROUP
-    // Ini adalah SOLUSI PALING AMAN - letakkan di luar prefix group
     Route::get('/restocks/monthly-report', [RestockController::class, 'getMonthlyReport'])->name('restocks.monthly-report');
     Route::get('/restocks/monthly-report/print', [RestockController::class, 'printMonthlyReport'])->name('restocks.monthly-report.print');
 

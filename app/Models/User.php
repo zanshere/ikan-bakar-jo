@@ -42,15 +42,20 @@ class User extends Authenticatable
         return $this->hasMany(Restock::class);
     }
 
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
+
     // Scopes
     public function scopeOwner($query)
     {
         return $query->where('role', 'owner');
     }
 
-    public function scopeStaff($query)
+    public function scopeUser($query)
     {
-        return $query->where('role', 'staff');
+        return $query->where('role', 'user');
     }
 
     // Methods
@@ -59,16 +64,16 @@ class User extends Authenticatable
         return $this->role === 'owner';
     }
 
-    public function isStaff()
+    public function isUser()
     {
-        return $this->role === 'staff';
+        return $this->role === 'user';
     }
 
     public function getRoleBadgeAttribute()
     {
         return match($this->role) {
             'owner' => '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">Owner</span>',
-            'staff' => '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Staff</span>',
+            'user' => '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">User</span>',
             default => '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unknown</span>',
         };
     }

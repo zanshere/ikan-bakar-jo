@@ -103,12 +103,11 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
-            'phone' => 'nullable|string|max:20',
-            'address' => 'nullable|string|max:500',
             'current_password' => 'required_with:new_password',
             'new_password' => 'nullable|min:8|confirmed',
         ], [
             'name.required' => 'Nama harus diisi',
+            'name.max' => 'Nama maksimal 255 karakter',
             'email.required' => 'Email harus diisi',
             'email.email' => 'Format email tidak valid',
             'email.unique' => 'Email sudah digunakan',
@@ -126,8 +125,6 @@ class AuthController extends Controller
         // Update data user
         $user->name = $request->name;
         $user->email = $request->email;
-        $user->phone = $request->phone;
-        $user->address = $request->address;
 
         // Update password jika ada
         if ($request->filled('new_password')) {

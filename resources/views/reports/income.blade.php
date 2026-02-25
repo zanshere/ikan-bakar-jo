@@ -171,6 +171,7 @@
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Menu</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Terjual</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pendapatan</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Rata-rata</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">% dari Total</th>
                             </tr>
                         </thead>
@@ -188,6 +189,9 @@
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="font-bold text-green-600">Rp {{ number_format($menu->total_sales, 0, ',', '.') }}</div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div class="text-gray-900">Rp {{ number_format($menu->average_price, 0, ',', '.') }}</div>
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center">
@@ -247,6 +251,9 @@
                                 <a href="{{ route('sales.show', $sale) }}" class="text-blue-600 hover:text-blue-800 font-medium">
                                     #{{ str_pad($sale->id, 6, '0', STR_PAD_LEFT) }}
                                 </a>
+                                @if($sale->order && $sale->order->order_number)
+                                <div class="text-xs text-gray-500">Order: {{ $sale->order->order_number }}</div>
+                                @endif
                             </td>
                             <td class="px-4 py-3">
                                 <div class="text-sm text-gray-900">{{ $sale->date->format('d/m/Y') }}</div>
@@ -257,9 +264,13 @@
                             </td>
                             <td class="px-4 py-3">
                                 <div class="text-sm text-gray-900">{{ $sale->items->sum('quantity') }} item</div>
+                                <div class="text-xs text-gray-500">{{ $sale->items->count() }} jenis</div>
                             </td>
                             <td class="px-4 py-3">
                                 <div class="font-bold text-green-600">Rp {{ number_format($sale->total, 0, ',', '.') }}</div>
+                                @if($sale->payment_method)
+                                <div class="text-xs text-gray-500">{{ $sale->payment_method_text }}</div>
+                                @endif
                             </td>
                         </tr>
                         @endforeach
@@ -376,6 +387,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     .shadow-sm {
         box-shadow: none !important;
+    }
+
+    table {
+        page-break-inside: auto;
+    }
+
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    tfoot {
+        display: table-footer-group;
     }
 }
 </style>
