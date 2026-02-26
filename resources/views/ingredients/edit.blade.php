@@ -359,20 +359,6 @@
                         </div>
                     </form>
                 </div>
-
-                <!-- Adjust Stock -->
-                <div>
-                    <h4 class="font-medium text-gray-800 mb-2">Sesuaikan Stok</h4>
-                    <p class="text-sm text-gray-600 mb-4">
-                        Lakukan penyesuaian stok manual jika ada selisih antara stok fisik dan sistem.
-                    </p>
-
-                    <a href="#" onclick="showAdjustStockModal()"
-                       class="inline-flex items-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700">
-                        <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
-                        Sesuaikan Stok
-                    </a>
-                </div>
             </div>
         </div>
     </div>

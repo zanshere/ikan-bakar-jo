@@ -17,10 +17,18 @@ class Sale extends Model
      * @var array
      */
     protected $fillable = [
+        'order_id',
         'date',
         'user_id',
+        'processed_by',
         'total',
         'notes',
+        'payment_status',
+        'payment_method',
+        'cash_received',
+        'change',
+        'processed_at',
+        'completed_at',
     ];
 
     /**
@@ -31,14 +39,46 @@ class Sale extends Model
     protected $casts = [
         'date' => 'date',
         'total' => 'decimal:2',
+        'cash_received' => 'decimal:2',
+        'change' => 'decimal:2',
+        'processed_at' => 'datetime',
+        'completed_at' => 'datetime',
     ];
 
     /**
-     * Get the user that recorded this sale.
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = [
+        'formatted_total',
+        'payment_status_badge',
+        'payment_status_text',
+        'payment_method_text',
+    ];
+
+    /**
+     * Get the order associated with this sale.
+     */
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    /**
+     * Get the user that placed this order.
      */
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Get the owner that processed this order.
+     */
+    public function processor()
+    {
+        return $this->belongsTo(User::class, 'processed_by');
     }
 
     /**
@@ -50,7 +90,7 @@ class Sale extends Model
     }
 
     /**
-     * Get formatted total price.
+     * Get formatted total.
      */
     public function getFormattedTotalAttribute()
     {
@@ -58,56 +98,155 @@ class Sale extends Model
     }
 
     /**
-     * Add item to this sale
+     * Get payment status badge.
      */
-    public function addItem($menuId, $quantity)
+    public function getPaymentStatusBadgeAttribute()
     {
-        $menu = Menu::findOrFail($menuId);
+        return match($this->payment_status) {
+            'pending' => '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Belum Bayar</span>',
+            'paid' => '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Lunas</span>',
+            default => '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unknown</span>',
+        };
+    }
 
-        // Check stock availability
-        foreach ($menu->ingredients as $ingredient) {
-            $requiredQuantity = $ingredient->pivot->quantity * $quantity;
+    /**
+     * Get payment status text.
+     */
+    public function getPaymentStatusTextAttribute()
+    {
+        return match($this->payment_status) {
+            'pending' => 'Belum Bayar',
+            'paid' => 'Lunas',
+            default => 'Unknown',
+        };
+    }
 
-            if ($ingredient->stock < $requiredQuantity) {
-                throw new \Exception("Stok {$ingredient->name} tidak mencukupi. Dibutuhkan: {$requiredQuantity} {$ingredient->unit}, Tersedia: {$ingredient->stock} {$ingredient->unit}");
+    /**
+     * Get payment method text.
+     */
+    public function getPaymentMethodTextAttribute()
+    {
+        return match($this->payment_method) {
+            'cash' => 'Tunai',
+            'transfer' => 'Transfer Bank',
+            default => '-',
+        };
+    }
+
+    /**
+     * Get order number from related order.
+     */
+    public function getOrderNumberAttribute()
+    {
+        return $this->order ? $this->order->order_number : null;
+    }
+
+    /**
+     * Get order status from related order.
+     */
+    public function getOrderStatusAttribute()
+    {
+        return $this->order ? $this->order->status : null;
+    }
+
+    /**
+     * Accept order (process by owner).
+     */
+    public function accept($processedBy)
+    {
+        if (!$this->order) {
+            throw new \Exception("Sale tidak memiliki order terkait");
+        }
+
+        // Accept the order (this will reduce stock)
+        $this->order->accept($processedBy);
+
+        // Update sale
+        $this->processed_by = $processedBy;
+        $this->processed_at = now();
+        $this->save();
+
+        return $this;
+    }
+
+    /**
+     * Complete order and process payment.
+     */
+    public function complete($paymentMethod, $cashReceived = null)
+    {
+        if (!$this->order) {
+            throw new \Exception("Sale tidak memiliki order terkait");
+        }
+
+        if ($this->order->status !== 'accepted') {
+            throw new \Exception("Hanya order yang diterima yang dapat diselesaikan");
+        }
+
+        // Calculate change for cash payment
+        $change = null;
+        if ($paymentMethod === 'cash' && $cashReceived !== null) {
+            $change = $cashReceived - $this->total;
+            if ($change < 0) {
+                throw new \Exception("Uang diterima kurang dari total pembayaran");
             }
         }
 
-        // Reduce ingredient stock
-        foreach ($menu->ingredients as $ingredient) {
-            $requiredQuantity = $ingredient->pivot->quantity * $quantity;
-            $ingredient->decreaseStock($requiredQuantity);
+        // Complete the order
+        $this->order->complete();
+
+        // Update sale with payment info
+        $this->payment_method = $paymentMethod;
+        $this->payment_status = 'paid';
+        $this->cash_received = $cashReceived;
+        $this->change = $change;
+        $this->completed_at = now();
+        $this->save();
+
+        return $this;
+    }
+
+    /**
+     * Reject order.
+     */
+    public function reject($reason, $processedBy)
+    {
+        if (!$this->order) {
+            throw new \Exception("Sale tidak memiliki order terkait");
         }
 
-        // Create sale item
-        $subtotal = $menu->price * $quantity;
+        if ($this->order->status !== 'pending') {
+            throw new \Exception("Order ini sudah diproses sebelumnya");
+        }
 
-        $item = $this->items()->create([
-            'menu_id' => $menuId,
-            'quantity' => $quantity,
-            'price' => $menu->price,
-            'subtotal' => $subtotal,
-        ]);
+        // Reject the order
+        $this->order->reject($reason, $processedBy);
 
-        // Update total
-        $this->updateTotal();
+        // Update sale
+        $this->processed_by = $processedBy;
+        $this->processed_at = now();
+        $this->save();
 
-        return $item;
+        return $this;
     }
 
     /**
-     * Update total based on items
+     * Scope for sales with pending payment.
      */
-    public function updateTotal()
+    public function scopePendingPayment($query)
     {
-        $total = $this->items()->sum('subtotal');
-        $this->update(['total' => $total]);
-
-        return $total;
+        return $query->where('payment_status', 'pending');
     }
 
     /**
-     * Scope for sales in date range
+     * Scope for sales with paid payment.
+     */
+    public function scopePaid($query)
+    {
+        return $query->where('payment_status', 'paid');
+    }
+
+    /**
+     * Scope for sales by date.
      */
     public function scopeDateRange($query, $startDate, $endDate)
     {
@@ -115,15 +254,7 @@ class Sale extends Model
     }
 
     /**
-     * Scope for sales by user
-     */
-    public function scopeByUser($query, $userId)
-    {
-        return $query->where('user_id', $userId);
-    }
-
-    /**
-     * Scope for sales today
+     * Scope for sales today.
      */
     public function scopeToday($query)
     {
@@ -131,19 +262,11 @@ class Sale extends Model
     }
 
     /**
-     * Scope for sales this month
+     * Scope for sales this month.
      */
     public function scopeThisMonth($query)
     {
         return $query->whereMonth('date', now()->month)
                      ->whereYear('date', now()->year);
-    }
-
-    /**
-     * Scope for sales this year
-     */
-    public function scopeThisYear($query)
-    {
-        return $query->whereYear('date', now()->year);
     }
 }

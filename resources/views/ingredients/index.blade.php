@@ -202,11 +202,6 @@
                                         class="text-green-600 hover:text-green-900 p-1">
                                         <i data-lucide="edit" class="w-4 h-4"></i>
                                     </a>
-                                    <button
-                                        onclick="showAdjustStockModal({{ $ingredient->id }}, '{{ $ingredient->name }}')"
-                                        class="text-amber-600 hover:text-amber-900 p-1">
-                                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                                    </button>
                                     <button onclick="deleteIngredient({{ $ingredient->id }}, '{{ $ingredient->name }}')"
                                         class="text-red-600 hover:text-red-900 p-1">
                                         <i data-lucide="trash-2" class="w-4 h-4"></i>

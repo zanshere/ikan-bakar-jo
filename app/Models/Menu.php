@@ -12,10 +12,13 @@ use Illuminate\Support\Facades\DB;
 class Menu extends Model
 {
     use HasFactory, SoftDeletes;
+    const TYPE_MAIN = 'main';
+    const TYPE_SAUCE = 'sauce';
 
     protected $fillable = [
         'code',
         'name',
+        'type',
         'price',
         'description',
         'image',
@@ -45,8 +48,8 @@ class Menu extends Model
     public function ingredients()
     {
         return $this->belongsToMany(Ingredient::class, 'menu_ingredient')
-                    ->withPivot('quantity')
-                    ->withTimestamps();
+            ->withPivot('quantity')
+            ->withTimestamps();
     }
 
     // Scopes
@@ -63,7 +66,7 @@ class Menu extends Model
     public function scopeSearch($query, $search)
     {
         return $query->where('name', 'like', "%{$search}%")
-                     ->orWhere('code', 'like', "%{$search}%");
+            ->orWhere('code', 'like', "%{$search}%");
     }
 
     // Methods
@@ -75,11 +78,11 @@ class Menu extends Model
         // Gunakan pendekatan berbeda: cari nomor yang tersedia
         // Ambil semua kode dengan prefix hari ini
         $existingCodes = self::where('code', 'like', $prefix . '%')
-                            ->pluck('code')
-                            ->map(function($code) {
-                                return intval(substr($code, -3));
-                            })
-                            ->toArray();
+            ->pluck('code')
+            ->map(function ($code) {
+                return intval(substr($code, -3));
+            })
+            ->toArray();
 
         // Jika tidak ada kode hari ini, mulai dari 1
         if (empty($existingCodes)) {
@@ -132,28 +135,47 @@ class Menu extends Model
 
     public function getCostAttribute()
     {
+        // Jika tipe sauce, return 0 karena biaya akan digabung dengan menu utama
+        if ($this->type === self::TYPE_SAUCE) {
+            return 0;
+        }
         return $this->calculateCost();
     }
 
     public function getFormattedCostAttribute()
     {
+        // Jika tipe sauce, return strip atau pesan khusus
+        if ($this->type === self::TYPE_SAUCE) {
+            return '<span class="text-gray-400">-</span>';
+        }
         return 'Rp ' . number_format($this->calculateCost(), 0, ',', '.');
     }
 
     public function getProfitAttribute()
     {
+        // Jika tipe sauce, return 0 karena profit dihitung dari menu utama
+        if ($this->type === self::TYPE_SAUCE) {
+            return 0;
+        }
         return $this->price - $this->calculateCost();
     }
 
     public function getFormattedProfitAttribute()
     {
+        // Jika tipe sauce, return strip atau pesan khusus
+        if ($this->type === self::TYPE_SAUCE) {
+            return '<span class="text-gray-400">-</span>';
+        }
         return 'Rp ' . number_format($this->profit, 0, ',', '.');
     }
 
     public function getProfitPercentageAttribute()
     {
+        // Jika tipe sauce, return 0
+        if ($this->type === self::TYPE_SAUCE) {
+            return 0;
+        }
         if ($this->price == 0) return 0;
-
         return round(($this->profit / $this->price) * 100, 2);
     }
 
@@ -168,7 +190,131 @@ class Menu extends Model
         $this->attributes['description'] = $value ?: null;
     }
 
-    // Boot method untuk events
+    /**
+     * Get the sauces that can be paired with this main menu.
+     */
+    public function availableSauces()
+    {
+        return $this->belongsToMany(Menu::class, 'menu_sauce', 'menu_id', 'sauce_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the main menus that this sauce can be paired with.
+     */
+    public function mainMenus()
+    {
+        return $this->belongsToMany(Menu::class, 'menu_sauce', 'sauce_id', 'menu_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the default sauce for this main menu.
+     */
+    public function defaultSauce()
+    {
+        return $this->belongsToMany(Menu::class, 'menu_sauce', 'menu_id', 'sauce_id')
+            ->wherePivot('is_default', true)
+            ->withTimestamps();
+    }
+
+    /**
+     * Scope to get only main menus.
+     */
+    public function scopeMainMenus($query)
+    {
+        return $query->where('type', self::TYPE_MAIN);
+    }
+
+    /**
+     * Scope to get only sauces.
+     */
+    public function scopeSauces($query)
+    {
+        return $query->where('type', self::TYPE_SAUCE);
+    }
+
+    /**
+     * Calculate the cost of this menu including optional sauce.
+     */
+    public function calculateCostWithSauce($sauceId = null)
+    {
+        $totalCost = 0;
+
+        // Calculate cost for main menu ingredients
+        foreach ($this->ingredients as $ingredient) {
+            $totalCost += $ingredient->price * $ingredient->pivot->quantity;
+        }
+
+        // If sauce is selected, calculate its ingredients cost
+        if ($sauceId) {
+            $sauce = self::find($sauceId);
+            if ($sauce) {
+                foreach ($sauce->ingredients as $ingredient) {
+                    $totalCost += $ingredient->price * $ingredient->pivot->quantity;
+                }
+            }
+        }
+
+        return $totalCost;
+    }
+
+    /**
+     * Calculate profit for this menu with optional sauce.
+     */
+    public function calculateProfitWithSauce($sauceId = null)
+    {
+        $sauce = $sauceId ? self::find($sauceId) : null;
+
+        // Harga saus sudah include di harga menu, jadi tidak perlu additional price
+        return $this->price - $this->calculateCostWithSauce($sauceId);
+    }
+
+    /**
+     * Calculate required quantity based on batch system (per 5 orders)
+     */
+    public function calculateRequiredQuantityForBatch($orderQuantity, $recipeQuantity)
+    {
+        // Hitung berapa batch yang diperlukan (1 batch = 5 porsi)
+        $batches = ceil($orderQuantity / 5);
+
+        // Kebutuhan bahan = jumlah batch * recipe quantity per batch
+        return $batches * $recipeQuantity;
+    }
+
+    /**
+     * Calculate the cost of this menu including optional sauce with batch system.
+     */
+    public function calculateCostWithSauceBatch($sauceId = null, $orderQuantity = 1)
+    {
+        $totalCost = 0;
+
+        // Calculate cost for main menu ingredients (per porsi)
+        foreach ($this->ingredients as $ingredient) {
+            $totalCost += $ingredient->price * $ingredient->pivot->quantity * $orderQuantity;
+        }
+
+        // If sauce is selected, calculate its ingredients cost with batch system
+        if ($sauceId) {
+            $sauce = self::find($sauceId);
+            if ($sauce) {
+                foreach ($sauce->ingredients as $ingredient) {
+                    // Untuk saus, hitung berdasarkan batch (per 5 porsi)
+                    $requiredQuantity = $this->calculateRequiredQuantityForBatch(
+                        $orderQuantity,
+                        $ingredient->pivot->quantity
+                    );
+                    $totalCost += $ingredient->price * $requiredQuantity;
+                }
+            }
+        }
+
+        return $totalCost;
+    }
+
+    /**
+     * Boot method for events.
+     */
     protected static function boot()
     {
         parent::boot();

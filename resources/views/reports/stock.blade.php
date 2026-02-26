@@ -30,9 +30,15 @@
     <div class="bg-white rounded-xl shadow-sm p-6">
         <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Cari Bahan</label>
+                <input type="text" name="search" value="{{ $search }}"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="Nama atau kode bahan...">
+            </div>
+
+            <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Status Stok</label>
-                <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                        onchange="this.form.submit()">
+                <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                     <option value="all" {{ $stockStatus == 'all' ? 'selected' : '' }}>Semua Status</option>
                     <option value="low" {{ $stockStatus == 'low' ? 'selected' : '' }}>Stok Rendah</option>
                     <option value="out" {{ $stockStatus == 'out' ? 'selected' : '' }}>Stok Habis</option>
@@ -40,7 +46,7 @@
                 </select>
             </div>
 
-            <div class="md:col-span-3 flex items-end space-x-2">
+            <div class="md:col-span-2 flex items-end space-x-2">
                 <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                     <i data-lucide="search" class="w-4 h-4 inline mr-1"></i>
                     Filter
@@ -62,7 +68,7 @@
                 </div>
                 <div>
                     <p class="text-sm text-gray-500">Total Bahan</p>
-                    <p class="text-2xl font-bold text-gray-800">{{ $ingredients->count() }}</p>
+                    <p class="text-2xl font-bold text-gray-800">{{ $stockStatistics['total_items'] }}</p>
                 </div>
             </div>
         </div>
@@ -87,7 +93,7 @@
                 <div>
                     <p class="text-sm text-gray-500">Stok Rendah</p>
                     <p class="text-2xl font-bold text-amber-600">
-                        {{ $ingredients->where('stock_status', 'low')->count() }}
+                        {{ $stockStatistics['low_stock'] }}
                     </p>
                 </div>
             </div>
@@ -101,7 +107,7 @@
                 <div>
                     <p class="text-sm text-gray-500">Stok Habis</p>
                     <p class="text-2xl font-bold text-red-600">
-                        {{ $ingredients->where('stock_status', 'empty')->count() }}
+                        {{ $stockStatistics['out_of_stock'] }}
                     </p>
                 </div>
             </div>
@@ -202,6 +208,7 @@
                         <tr>
                             <td class="px-4 py-3">
                                 <div class="font-medium text-gray-900">{{ $movement['ingredient'] }}</div>
+                                <div class="text-xs text-gray-500">{{ $movement['unit'] }}</div>
                             </td>
                             <td class="px-4 py-3">
                                 <div class="text-green-600 font-medium">+{{ number_format($movement['stock_in'], 2, ',', '.') }}</div>
@@ -251,7 +258,7 @@
         <div class="bg-white rounded-xl shadow-sm">
             <div class="p-6 border-b">
                 <h3 class="text-lg font-semibold text-gray-800">Distribusi Nilai Stok</h3>
-                <p class="text-sm text-gray-600 mt-1">Persentase nilai stok per bahan</p>
+                <p class="text-sm text-gray-600 mt-1">10 bahan dengan nilai stok terbesar</p>
             </div>
 
             <div class="p-6">
@@ -275,6 +282,54 @@
             </div>
         </div>
     </div>
+
+    <!-- Warning Items -->
+    @if($warningItems->count() > 0)
+    <div class="bg-white rounded-xl shadow-sm">
+        <div class="p-6 border-b">
+            <h3 class="text-lg font-semibold text-gray-800">Peringatan Stok</h3>
+            <p class="text-sm text-gray-600 mt-1">Bahan yang perlu segera direstock</p>
+        </div>
+
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                @foreach($warningItems->take(6) as $item)
+                <div class="p-4 {{ $item->stock <= 0 ? 'bg-red-50' : 'bg-amber-50' }} rounded-lg border {{ $item->stock <= 0 ? 'border-red-200' : 'border-amber-200' }}">
+                    <div class="flex items-start">
+                        <div class="flex-1">
+                            <h4 class="font-medium text-gray-800">{{ $item->name }}</h4>
+                            <p class="text-xs text-gray-500 mt-1">{{ $item->code }} • {{ $item->unit }}</p>
+                            <div class="mt-2 space-y-1">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Stok:</span>
+                                    <span class="font-medium {{ $item->stock <= 0 ? 'text-red-600' : 'text-amber-600' }}">
+                                        {{ $item->formatted_stock }}
+                                    </span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Min Stok:</span>
+                                    <span class="font-medium">{{ $item->formatted_min_stock }}</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Kekurangan:</span>
+                                    <span class="font-medium text-red-600">
+                                        {{ number_format(max($item->min_stock - $item->stock, 0), 2, ',', '.') }} {{ $item->unit }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+            @if($warningItems->count() > 6)
+            <div class="text-center mt-4">
+                <p class="text-sm text-gray-500">+{{ $warningItems->count() - 6 }} bahan lainnya perlu perhatian</p>
+            </div>
+            @endif
+        </div>
+    </div>
+    @endif
 
     <!-- Recommendations -->
     <div class="bg-white rounded-xl shadow-sm">
@@ -350,11 +405,12 @@
                     <i data-lucide="lightbulb" class="w-5 h-5 text-blue-600 mr-3 mt-0.5"></i>
                     <div>
                         <h4 class="font-medium text-blue-800">Tips Manajemen Stok</h4>
-                        <ul class="text-sm text-blue-700 mt-1 space-y-1">
-                            <li>• Lakukan stock opname secara berkala untuk memastikan akurasi data</li>
-                            <li>• Setel stok minimum yang realistis berdasarkan pola penggunaan</li>
-                            <li>• Pertimbangkan untuk melakukan bulk ordering untuk bahan dengan turnover tinggi</li>
-                            <li>• Monitor pergerakan stok secara rutin untuk mengidentifikasi pola penggunaan</li>
+                        <ul class="text-sm text-blue-700 mt-1 space-y-1 list-disc list-inside">
+                            <li>Lakukan stock opname secara berkala untuk memastikan akurasi data</li>
+                            <li>Setel stok minimum yang realistis berdasarkan pola penggunaan</li>
+                            <li>Pertimbangkan untuk melakukan bulk ordering untuk bahan dengan turnover tinggi</li>
+                            <li>Monitor pergerakan stok secara rutin untuk mengidentifikasi pola penggunaan</li>
+                            <li>Gunakan sistem FIFO (First In First Out) untuk bahan yang mudah rusak</li>
                         </ul>
                     </div>
                 </div>
@@ -382,11 +438,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const valueLabels = {!! json_encode($ingredients->sortByDesc(function($item) {
         return $item->stock * $item->price;
-    })->take(8)->pluck('name')->toArray()) !!};
+    })->take(10)->pluck('name')->toArray()) !!};
 
     const valueData = {!! json_encode($ingredients->sortByDesc(function($item) {
         return $item->stock * $item->price;
-    })->take(8)->map(function($item) {
+    })->take(10)->map(function($item) {
         return $item->stock * $item->price;
     })->toArray()) !!};
 
@@ -421,6 +477,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 x: {
                     grid: {
                         display: false
+                    },
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
                     }
                 },
                 y: {
@@ -460,7 +520,22 @@ document.addEventListener('DOMContentLoaded', function() {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    position: 'right'
+                    position: 'right',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            return `${label}: ${value} item (${percentage}%)`;
+                        }
+                    }
                 }
             }
         }
@@ -488,6 +563,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     .shadow-sm {
         box-shadow: none !important;
+    }
+
+    table {
+        page-break-inside: auto;
+    }
+
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    tfoot {
+        display: table-footer-group;
     }
 }
 </style>
