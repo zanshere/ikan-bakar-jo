@@ -50,6 +50,30 @@
             .print-only {
                 display: block !important;
             }
+
+            #sidebar,
+            #sidebarToggle,
+            #sidebarOverlay,
+            header,
+            nav,
+            .sidebar-link,
+            [x-data] {
+                display: none !important;
+            }
+
+            main {
+                margin-left: 0 !important;
+            }
+
+            main > div {
+                padding: 0 !important;
+            }
+
+            .bg-white,
+            .shadow-sm,
+            .rounded-xl {
+                box-shadow: none !important;
+            }
         }
     </style>
 
@@ -218,11 +242,13 @@
                             x-transition:leave-start="transform opacity-100 scale-100"
                             x-transition:leave-end="transform opacity-0 scale-95"
                             class="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-lg shadow-lg border z-50">
-                            <a href="{{ route('profile') }}"
-                                class="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50">
-                                <i data-lucide="user" class="w-4 h-4"></i>
-                                <span>Profil</span>
-                            </a>
+                            @if (Auth::user()->isOwner())
+                                <a href="{{ route('profile') }}"
+                                    class="flex items-center space-x-2 px-4 py-3 hover:bg-gray-50">
+                                    <i data-lucide="user" class="w-4 h-4"></i>
+                                    <span>Profil</span>
+                                </a>
+                            @endif
                             <form action="{{ route('logout') }}" method="POST">
                                 @csrf
                                 <button type="submit"
