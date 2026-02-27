@@ -15,14 +15,16 @@ class IngredientController extends Controller
         $query = Ingredient::with('menus');
 
         // Search filter
-        if ($request->has('search')) {
-            $search = $request->get('search');
-            $query->where('name', 'like', "%{$search}%")
-                ->orWhere('code', 'like', "%{$search}%");
+        if ($request->filled('search')) {
+            $search = trim($request->get('search'));
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%");
+            });
         }
 
         // Stock status filter
-        if ($request->has('stock_status')) {
+        if ($request->filled('stock_status')) {
             switch ($request->get('stock_status')) {
                 case 'low':
                     $query->lowStock();
@@ -37,14 +39,23 @@ class IngredientController extends Controller
         }
 
         // Unit filter
-        if ($request->has('unit')) {
+        if ($request->filled('unit')) {
             $query->where('unit', $request->get('unit'));
         }
 
-        $ingredients = $query->latest()->paginate(20);
+        // Stock range filter
+        if ($request->filled('min_stock')) {
+            $query->where('stock', '>=', (float) $request->get('min_stock'));
+        }
+
+        if ($request->filled('max_stock')) {
+            $query->where('stock', '<=', (float) $request->get('max_stock'));
+        }
+
+        $ingredients = $query->latest()->paginate(20)->withQueryString();
 
         // Get unique units for filter
-        $units = Ingredient::distinct()->pluck('unit');
+        $units = Ingredient::query()->distinct()->orderBy('unit')->pluck('unit');
 
         return view('ingredients.index', compact('ingredients', 'units'));
     }

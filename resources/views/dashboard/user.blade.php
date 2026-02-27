@@ -7,7 +7,7 @@
 @section('content')
 <div class="space-y-6">
     {{-- Stats Cards --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <div class="bg-white rounded-xl shadow-sm p-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -172,25 +172,34 @@
             @if($recommendedMenus->isEmpty())
                 <p class="text-gray-500 text-center py-4">Belum ada menu tersedia</p>
             @else
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                     @foreach($recommendedMenus as $menu)
-                        <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                            @if($menu->image)
-                            <div class="h-32 w-full mb-3 rounded overflow-hidden">
-                                <img src="{{ Storage::url($menu->image) }}" alt="{{ $menu->name }}" class="w-full h-full object-cover">
+                        <article class="group border border-gray-200 rounded-xl overflow-hidden bg-white hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+                            <div class="aspect-[4/3] w-full bg-gradient-to-br from-blue-50 via-indigo-50 to-white flex items-center justify-center overflow-hidden">
+                                @if($menu->image)
+                                    <img src="{{ Storage::url($menu->image) }}" alt="{{ $menu->name }}" class="w-full h-full object-contain p-3">
+                                @else
+                                    <div class="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center">
+                                        <i data-lucide="utensils" class="w-8 h-8 text-gray-400"></i>
+                                    </div>
+                                @endif
                             </div>
-                            @else
-                            <div class="h-32 w-full mb-3 bg-gray-100 rounded flex items-center justify-center">
-                                <i data-lucide="utensils" class="w-8 h-8 text-gray-400"></i>
+
+                            <div class="p-4">
+                                <div class="flex items-start justify-between gap-3 mb-3">
+                                    <h4 class="font-semibold text-gray-800 leading-snug">{{ $menu->name }}</h4>
+                                    <span class="shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Rekomendasi</span>
+                                </div>
+
+                                <div class="flex items-center justify-between gap-2">
+                                    <p class="text-base text-blue-600 font-bold">{{ $menu->formatted_price }}</p>
+                                    <a href="{{ route('orders.create') }}?menu={{ $menu->id }}" class="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800">
+                                        Pesan Sekarang
+                                        <i data-lucide="arrow-right" class="w-3.5 h-3.5 ml-1 group-hover:translate-x-0.5 transition-transform"></i>
+                                    </a>
+                                </div>
                             </div>
-                            @endif
-                            <h4 class="font-medium text-gray-800 mb-1">{{ $menu->name }}</h4>
-                            <p class="text-sm text-blue-600 font-semibold">{{ $menu->formatted_price }}</p>
-                            <a href="{{ route('orders.create') }}?menu={{ $menu->id }}" class="mt-3 inline-flex items-center text-sm text-blue-600 hover:text-blue-800">
-                                Pesan Sekarang
-                                <i data-lucide="arrow-right" class="w-3 h-3 ml-1"></i>
-                            </a>
-                        </div>
+                        </article>
                     @endforeach
                 </div>
             @endif
