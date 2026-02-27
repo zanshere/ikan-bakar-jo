@@ -175,17 +175,6 @@
                     </a>
 
                     <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                        Menu
-                    </div>
-
-                    <!-- Daftar Menu (Hanya untuk melihat menu yang tersedia) -->
-                    <a href="{{ route('menus.index') }}"
-                        class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 {{ request()->routeIs('menus.index') ? 'active' : '' }}">
-                        <i data-lucide="utensils" class="w-5 h-5"></i>
-                        <span>Daftar Menu</span>
-                    </a>
-
-                    <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                         Pesanan
                     </div>
 
