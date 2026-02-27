@@ -35,28 +35,31 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
     Route::get('/dashboard/quick-stats', [DashboardController::class, 'getQuickStats'])->name('dashboard.quick-stats');
 
-    // Profile
-    Route::get('/profile', [AuthController::class, 'profile'])->name('profile');
-    Route::post('/profile', [AuthController::class, 'updateProfile'])->name('profile.update');
+    // Profile (owner only)
+    Route::middleware('owner')->group(function () {
+        Route::get('/profile', [AuthController::class, 'profile'])->name('profile');
+        Route::post('/profile', [AuthController::class, 'updateProfile'])->name('profile.update');
+    });
 
     // ==================== MENU MANAGEMENT ====================
     // Semua user bisa melihat daftar menu
     Route::prefix('menus')->name('menus.')->group(function () {
         Route::get('/', [MenuController::class, 'index'])->name('index'); // Daftar Menu (untuk semua user)
-        Route::get('/{menu}', [MenuController::class, 'show'])->name('show'); // Detail Menu (untuk semua user)
 
         // Route khusus owner untuk mengelola menu (create, edit, update, delete, toggle-status, manage-sauces)
         Route::middleware('owner')->group(function () {
             Route::get('/create', [MenuController::class, 'create'])->name('create');
             Route::post('/', [MenuController::class, 'store'])->name('store');
+            Route::get('/get/details', [MenuController::class, 'getMenuDetails'])->name('get.details');
             Route::get('/{menu}/edit', [MenuController::class, 'edit'])->name('edit');
             Route::put('/{menu}', [MenuController::class, 'update'])->name('update');
             Route::delete('/{menu}', [MenuController::class, 'destroy'])->name('destroy');
             Route::post('/{menu}/toggle-status', [MenuController::class, 'toggleStatus'])->name('toggle-status');
-            Route::get('/get/details', [MenuController::class, 'getMenuDetails'])->name('get.details');
             Route::get('/{menu}/manage-sauces', [MenuController::class, 'manageSauces'])->name('manage-sauces');
             Route::post('/{menu}/update-sauces', [MenuController::class, 'updateSauces'])->name('update-sauces');
         });
+
+        Route::get('/{menu}', [MenuController::class, 'show'])->name('show'); // Detail Menu (untuk semua user)
     });
 
     // ==================== INGREDIENT MANAGEMENT ====================
