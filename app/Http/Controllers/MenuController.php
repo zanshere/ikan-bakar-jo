@@ -15,31 +15,37 @@ class MenuController extends Controller
 {
     public function index(Request $request)
     {
-        // dd(Menu::all());
         $query = Menu::with('ingredients');
 
         // Search filter
-        if ($request->has('search')) {
-            $search = $request->get('search');
-            $query->where('name', 'like', "%{$search}%")
-                ->orWhere('code', 'like', "%{$search}%");
+        if ($request->filled('search')) {
+            $search = trim($request->get('search'));
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
+
+        // Type filter
+        if ($request->filled('type') && in_array($request->get('type'), [Menu::TYPE_MAIN, Menu::TYPE_SAUCE])) {
+            $query->where('type', $request->get('type'));
         }
 
         // Status filter
-        if ($request->has('status') && in_array($request->get('status'), ['active', 'inactive'])) {
+        if ($request->filled('status') && in_array($request->get('status'), ['active', 'inactive'])) {
             $query->where('is_active', $request->get('status') === 'active');
         }
 
         // Price range filter
-        if ($request->has('min_price')) {
-            $query->where('price', '>=', $request->get('min_price'));
+        if ($request->filled('min_price')) {
+            $query->where('price', '>=', (float) $request->get('min_price'));
         }
 
-        if ($request->has('max_price')) {
-            $query->where('price', '<=', $request->get('max_price'));
+        if ($request->filled('max_price')) {
+            $query->where('price', '<=', (float) $request->get('max_price'));
         }
 
-        $menus = $query->latest()->paginate(20);
+        $menus = $query->latest()->paginate(20)->withQueryString();
 
         return view('menus.index', compact('menus'));
     }
