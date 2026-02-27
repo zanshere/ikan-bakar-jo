@@ -39,6 +39,8 @@ class DashboardController extends Controller
         // Filter date range
         $startDate = $request->get('start_date', now()->startOfMonth()->format('Y-m-d'));
         $endDate = $request->get('end_date', now()->format('Y-m-d'));
+        $start = Carbon::parse($startDate)->startOfDay();
+        $end = Carbon::parse($endDate)->endOfDay();
 
         // Today's statistics
         $todayIncome = Sale::whereDate('date', today())
@@ -51,13 +53,11 @@ class DashboardController extends Controller
         // Pending orders count
         $pendingOrders = Order::where('status', 'pending')->count();
 
-        // This month statistics
-        $monthIncome = Sale::whereMonth('date', now()->month)
-            ->whereYear('date', now()->year)
+        // Statistics in selected date range
+        $monthIncome = Sale::whereBetween('date', [$start, $end])
             ->where('payment_status', 'paid')
             ->sum('total');
-        $monthExpense = Restock::whereMonth('date', now()->month)
-            ->whereYear('date', now()->year)
+        $monthExpense = Restock::whereBetween('date', [$start, $end])
             ->sum('total');
         $monthProfit = $monthIncome - $monthExpense;
 
@@ -82,8 +82,7 @@ class DashboardController extends Controller
                 DB::raw('SUM(sale_items.quantity) as total_quantity'),
                 DB::raw('SUM(sale_items.subtotal) as total_sales')
             )
-            ->whereMonth('sale_items.created_at', now()->month)
-            ->whereYear('sale_items.created_at', now()->year)
+            ->whereBetween('sale_items.created_at', [$start, $end])
             ->groupBy('menus.id', 'menus.name', 'menus.code')
             ->orderBy('total_quantity', 'desc')
             ->limit(5)
@@ -92,25 +91,28 @@ class DashboardController extends Controller
         // Recent sales
         $recentSales = Sale::with('user')
             ->where('payment_status', 'paid')
-            ->latest()
+            ->whereBetween('date', [$start, $end])
+            ->latest('date')
             ->limit(10)
             ->get();
 
         // Recent orders
         $recentOrders = Order::with('user')
+            ->whereBetween('order_date', [$start, $end])
             ->latest('order_date')
             ->limit(10)
             ->get();
 
         // Recent restocks
         $recentRestocks = Restock::with('user')
-            ->latest()
+            ->whereBetween('date', [$start, $end])
+            ->latest('date')
             ->limit(10)
             ->get();
 
         // Income chart data (last 30 days)
-        $incomeChartData = $this->getIncomeChartData(30);
-        $expenseChartData = $this->getExpenseChartData(30);
+        $incomeChartData = $this->getIncomeChartData($start, $end);
+        $expenseChartData = $this->getExpenseChartData($start, $end);
 
         // Stock value
         $totalStockValue = Ingredient::sum(DB::raw('stock * price'));
@@ -255,14 +257,14 @@ class DashboardController extends Controller
     /**
      * Get income chart data.
      */
-    private function getIncomeChartData($days = 30)
+    private function getIncomeChartData(Carbon $start, Carbon $end)
     {
         $data = Sale::select(
                 DB::raw('DATE(date) as date'),
                 DB::raw('SUM(total) as total')
             )
-            ->whereDate('date', '>=', now()->subDays($days))
             ->where('payment_status', 'paid')
+            ->whereBetween('date', [$start, $end])
             ->groupBy('date')
             ->orderBy('date')
             ->get();
@@ -270,11 +272,13 @@ class DashboardController extends Controller
         $labels = [];
         $values = [];
 
-        for ($i = $days - 1; $i >= 0; $i--) {
-            $date = now()->subDays($i)->format('Y-m-d');
+        $cursor = $start->copy();
+        while ($cursor->lte($end)) {
+            $date = $cursor->format('Y-m-d');
             $dayData = $data->firstWhere('date', $date);
-            $labels[] = now()->subDays($i)->format('d/m');
+            $labels[] = $cursor->format('d/m');
             $values[] = $dayData ? (float) $dayData->total : 0;
+            $cursor->addDay();
         }
 
         return [
@@ -286,13 +290,13 @@ class DashboardController extends Controller
     /**
      * Get expense chart data.
      */
-    private function getExpenseChartData($days = 30)
+    private function getExpenseChartData(Carbon $start, Carbon $end)
     {
         $data = Restock::select(
                 DB::raw('DATE(date) as date'),
                 DB::raw('SUM(total) as total')
             )
-            ->whereDate('date', '>=', now()->subDays($days))
+            ->whereBetween('date', [$start, $end])
             ->groupBy('date')
             ->orderBy('date')
             ->get();
@@ -300,11 +304,13 @@ class DashboardController extends Controller
         $labels = [];
         $values = [];
 
-        for ($i = $days - 1; $i >= 0; $i--) {
-            $date = now()->subDays($i)->format('Y-m-d');
+        $cursor = $start->copy();
+        while ($cursor->lte($end)) {
+            $date = $cursor->format('Y-m-d');
             $dayData = $data->firstWhere('date', $date);
-            $labels[] = now()->subDays($i)->format('d/m');
+            $labels[] = $cursor->format('d/m');
             $values[] = $dayData ? (float) $dayData->total : 0;
+            $cursor->addDay();
         }
 
         return [
