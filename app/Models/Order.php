@@ -351,7 +351,8 @@ class Order extends Model
         return $batches * $recipeQuantity;
     }
 
-    /**
+
+    /*
      * Accept order (process by owner) with batch system for sauces.
      */
     public function accept($processedBy)
@@ -372,14 +373,12 @@ class Order extends Model
             }
         }
 
-        // Log untuk debugging
         Log::info('Order accept - Sauce quantities:', $sauceQuantities);
 
         // Check stock availability for menu ingredients (per porsi)
         foreach ($this->items as $item) {
             $menu = $item->menu;
 
-            // Check stock for menu ingredients
             foreach ($menu->ingredients as $ingredient) {
                 $requiredQuantity = $ingredient->pivot->quantity * $item->quantity;
 
@@ -389,18 +388,19 @@ class Order extends Model
             }
         }
 
-        // Check stock availability for sauces based on total quantity per sauce
+        // Check stock availability for sauces based on total quantity per sauce (floor division)
         foreach ($sauceQuantities as $sauceId => $totalQuantity) {
             $sauce = Menu::find($sauceId);
             if (!$sauce) continue;
 
-            $batches = ceil($totalQuantity / 5);
+            $batches = intdiv($totalQuantity, 5); // floor: hanya kurangi stok setiap 5 order
+            if ($batches > 0) {
+                foreach ($sauce->ingredients as $ingredient) {
+                    $requiredQuantity = $batches * $ingredient->pivot->quantity;
 
-            foreach ($sauce->ingredients as $ingredient) {
-                $requiredQuantity = $batches * $ingredient->pivot->quantity;
-
-                if ($ingredient->stock < $requiredQuantity) {
-                    throw new \Exception("Stok {$ingredient->name} tidak mencukupi untuk saus {$sauce->name}. Total pesanan saus: {$totalQuantity} porsi / {$batches} batch. Dibutuhkan: {$requiredQuantity} {$ingredient->unit}, Tersedia: {$ingredient->stock} {$ingredient->unit}");
+                    if ($ingredient->stock < $requiredQuantity) {
+                        throw new \Exception("Stok {$ingredient->name} tidak mencukupi untuk saus {$sauce->name}. Total pesanan saus: {$totalQuantity} porsi / {$batches} batch. Dibutuhkan: {$requiredQuantity} {$ingredient->unit}, Tersedia: {$ingredient->stock} {$ingredient->unit}");
+                    }
                 }
             }
         }
@@ -409,33 +409,32 @@ class Order extends Model
         foreach ($this->items as $item) {
             $menu = $item->menu;
 
-            // Reduce stock for menu ingredients (per porsi)
             foreach ($menu->ingredients as $ingredient) {
                 $requiredQuantity = $ingredient->pivot->quantity * $item->quantity;
                 $ingredient->decreaseStock($requiredQuantity);
             }
         }
 
-        // Reduce stock for sauces based on total quantity per sauce (sekali kurangi per saus)
+        // Reduce stock for sauces based on total quantity per sauce (floor division)
         foreach ($sauceQuantities as $sauceId => $totalQuantity) {
             $sauce = Menu::find($sauceId);
             if (!$sauce) continue;
 
-            $batches = ceil($totalQuantity / 5);
+            $batches = intdiv($totalQuantity, 5);
+            if ($batches > 0) {
+                foreach ($sauce->ingredients as $ingredient) {
+                    $requiredQuantity = $batches * $ingredient->pivot->quantity;
+                    $ingredient->decreaseStock($requiredQuantity);
 
-            foreach ($sauce->ingredients as $ingredient) {
-                $requiredQuantity = $batches * $ingredient->pivot->quantity;
-                $ingredient->decreaseStock($requiredQuantity);
-
-                // Log untuk debugging
-                Log::info('Sauce stock reduced (global batch)', [
-                    'sauce' => $sauce->name,
-                    'total_sauce_orders' => $totalQuantity,
-                    'batches' => $batches,
-                    'ingredient' => $ingredient->name,
-                    'required' => $requiredQuantity,
-                    'remaining_stock' => $ingredient->stock
-                ]);
+                    Log::info('Sauce stock reduced (global batch)', [
+                        'sauce' => $sauce->name,
+                        'total_sauce_orders' => $totalQuantity,
+                        'batches' => $batches,
+                        'ingredient' => $ingredient->name,
+                        'required' => $requiredQuantity,
+                        'remaining_stock' => $ingredient->stock
+                    ]);
+                }
             }
         }
 

@@ -153,47 +153,25 @@ class OrderController extends Controller
         $items = $request->items;
         if (is_string($items)) {
             $items = json_decode($items, true);
-
             if (json_last_error() !== JSON_ERROR_NONE) {
                 Log::error('JSON decode error:', [
                     'error' => json_last_error_msg(),
                     'items_string' => $request->items
                 ]);
-
-                if ($request->ajax() || $request->wantsJson()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Format data items tidak valid: ' . json_last_error_msg()
-                    ], 422);
-                }
-
-                return redirect()->back()
-                    ->with('error', 'Format data items tidak valid')
-                    ->withInput();
+                return $this->jsonOrRedirect($request, false, 'Format data items tidak valid: ' . json_last_error_msg());
             }
         }
 
         // Validate items array
         if (!is_array($items) || empty($items)) {
             Log::error('Items is not array or empty:', ['items' => $items]);
-
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Keranjang tidak boleh kosong. Silakan pilih menu terlebih dahulu.'
-                ], 422);
-            }
-
-            return redirect()->back()
-                ->with('error', 'Keranjang tidak boleh kosong. Silakan pilih menu terlebih dahulu.')
-                ->withInput();
+            return $this->jsonOrRedirect($request, false, 'Keranjang tidak boleh kosong. Silakan pilih menu terlebih dahulu.');
         }
 
         // Build validation rules
         $validationRules = [
             'notes' => 'nullable|string|max:500',
         ];
-
         foreach ($items as $index => $item) {
             $validationRules["items.{$index}.menu_id"] = 'required|exists:menus,id';
             $validationRules["items.{$index}.sauce_id"] = 'required|exists:menus,id';
@@ -216,68 +194,96 @@ class OrderController extends Controller
         $requestData['items'] = $items;
 
         $validator = Validator::make($requestData, $validationRules, $validationMessages);
-
         if ($validator->fails()) {
             Log::error('Order validation failed:', $validator->errors()->toArray());
-
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validasi gagal',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
+            return $this->jsonOrRedirect($request, false, 'Validasi gagal', $validator->errors());
         }
 
-        DB::beginTransaction();
+        // --- VALIDASI RELASI DAN KETERSEDIAAN SAUS ---
+        // Ambil semua ID menu dan sauce yang diperlukan
+        $menuIds = array_unique(array_column($items, 'menu_id'));
+        $sauceIds = array_unique(array_column($items, 'sauce_id'));
+        $allMenuIds = array_merge($menuIds, $sauceIds);
 
-        try {
-            // Check stock availability for all items before creating order
-            foreach ($items as $itemData) {
-                $menu = Menu::findOrFail($itemData['menu_id']);
-                $sauce = Menu::findOrFail($itemData['sauce_id']);
+        // Load semua menu + ingredients sekaligus
+        $menus = Menu::with('ingredients')
+            ->whereIn('id', $allMenuIds)
+            ->where('is_active', true)
+            ->get()
+            ->keyBy('id');
 
-                // Validate that the sauce is available for this menu
-                $isAvailable = $menu->availableSauces()
-                    ->where('sauce_id', $sauce->id)
-                    ->exists();
-
-                if (!$isAvailable) {
-                    throw new \Exception("Saus {$sauce->name} tidak tersedia untuk menu {$menu->name}");
-                }
-
-                // Check if menu and sauce are active
-                if (!$menu->is_active) {
-                    throw new \Exception("Menu {$menu->name} tidak aktif");
-                }
-
-                if (!$sauce->is_active) {
-                    throw new \Exception("Saus {$sauce->name} tidak aktif");
-                }
-
-                // Check stock for menu ingredients
-                foreach ($menu->ingredients as $ingredient) {
-                    $requiredQuantity = $ingredient->pivot->quantity * $itemData['quantity'];
-
-                    if ($ingredient->stock < $requiredQuantity) {
-                        throw new \Exception("Stok {$ingredient->name} tidak mencukupi untuk menu {$menu->name}. Dibutuhkan: {$requiredQuantity} {$ingredient->unit}, Tersedia: {$ingredient->stock} {$ingredient->unit}");
-                    }
-                }
-
-                // Check stock for sauce ingredients
-                foreach ($sauce->ingredients as $ingredient) {
-                    $requiredQuantity = $ingredient->pivot->quantity * $itemData['quantity'];
-
-                    if ($ingredient->stock < $requiredQuantity) {
-                        throw new \Exception("Stok {$ingredient->name} tidak mencukupi untuk saus {$sauce->name}. Dibutuhkan: {$requiredQuantity} {$ingredient->unit}, Tersedia: {$ingredient->stock} {$ingredient->unit}");
-                    }
-                }
+        // Pastikan semua menu dan sauce ditemukan dan aktif
+        foreach ($items as $itemData) {
+            if (!isset($menus[$itemData['menu_id']])) {
+                return $this->jsonOrRedirect($request, false, "Menu dengan ID {$itemData['menu_id']} tidak ditemukan atau tidak aktif.");
+            }
+            if (!isset($menus[$itemData['sauce_id']])) {
+                return $this->jsonOrRedirect($request, false, "Saus dengan ID {$itemData['sauce_id']} tidak ditemukan atau tidak aktif.");
             }
 
+            $menu = $menus[$itemData['menu_id']];
+            $sauce = $menus[$itemData['sauce_id']];
+
+            // Validasi tipe: menu harus 'main', sauce harus 'sauce'
+            if ($menu->type !== 'main') {
+                return $this->jsonOrRedirect($request, false, "Menu {$menu->name} bukan menu utama.");
+            }
+            if ($sauce->type !== 'sauce') {
+                return $this->jsonOrRedirect($request, false, "Saus {$sauce->name} bukan berjenis saus.");
+            }
+
+            // Validasi ketersediaan sauce untuk menu ini
+            $isAvailable = $menu->availableSauces()
+                ->where('sauce_id', $sauce->id)
+                ->exists();
+            if (!$isAvailable) {
+                return $this->jsonOrRedirect($request, false, "Saus {$sauce->name} tidak tersedia untuk menu {$menu->name}.");
+            }
+        }
+
+        // --- HITUNG KEBUTUHAN STOK PER INGREDIENT ---
+        $requiredIngredients = [];
+
+        // 1. Kebutuhan dari menu utama (langsung per porsi)
+        foreach ($items as $itemData) {
+            $menu = $menus[$itemData['menu_id']];
+            foreach ($menu->ingredients as $ingredient) {
+                $qty = $ingredient->pivot->quantity * $itemData['quantity'];
+                $requiredIngredients[$ingredient->id] = ($requiredIngredients[$ingredient->id] ?? 0) + $qty;
+            }
+        }
+
+        // 2. Kebutuhan dari saus (berdasarkan batch 5 order)
+        $sauceQuantities = [];
+        foreach ($items as $itemData) {
+            $sauceId = $itemData['sauce_id'];
+            $sauceQuantities[$sauceId] = ($sauceQuantities[$sauceId] ?? 0) + $itemData['quantity'];
+        }
+
+        foreach ($sauceQuantities as $sauceId => $totalQty) {
+            $sauce = $menus[$sauceId];
+            $batches = intdiv($totalQty, 5); // floor division
+            if ($batches > 0) {
+                foreach ($sauce->ingredients as $ingredient) {
+                    $qty = $ingredient->pivot->quantity * $batches;
+                    $requiredIngredients[$ingredient->id] = ($requiredIngredients[$ingredient->id] ?? 0) + $qty;
+                }
+            }
+        }
+
+        // Cek kecukupan stok
+        foreach ($requiredIngredients as $ingredientId => $requiredQty) {
+            $ingredient = Ingredient::find($ingredientId);
+            if ($ingredient->stock < $requiredQty) {
+                $msg = "Stok {$ingredient->name} tidak mencukupi. Dibutuhkan: {$requiredQty} {$ingredient->unit}, tersedia: {$ingredient->stock} {$ingredient->unit}.";
+                Log::error('Stock check failed: ' . $msg);
+                return $this->jsonOrRedirect($request, false, $msg);
+            }
+        }
+
+        // --- SEMUA VALIDASI LULUS, MULAI TRANSAKSI ---
+        DB::beginTransaction();
+        try {
             // Create new order
             $order = Order::create([
                 'user_id' => Auth::id(),
@@ -290,15 +296,14 @@ class OrderController extends Controller
 
             // Add items to order with sauce
             foreach ($items as $itemData) {
-                $menu = Menu::find($itemData['menu_id']);
-                $sauce = Menu::find($itemData['sauce_id']);
+                $menu = $menus[$itemData['menu_id']];
+                $sauce = $menus[$itemData['sauce_id']];
 
-                // Additional price is 0 because sauce price is already included in menu price
+                // Additional price is 0 (harga saus sudah include di menu utama)
                 $additionalPrice = 0;
                 $subtotal = $menu->price * $itemData['quantity'];
 
-                // Create order item
-                $orderItem = OrderItem::create([
+                OrderItem::create([
                     'order_id' => $order->id,
                     'menu_id' => $menu->id,
                     'sauce_id' => $sauce->id,
@@ -311,7 +316,6 @@ class OrderController extends Controller
                 $total += $subtotal;
             }
 
-            // Update order total
             $order->update(['total' => $total]);
 
             // Create sale record
@@ -364,7 +368,6 @@ class OrderController extends Controller
                 ->with('success', 'Pesanan berhasil dibuat! Menunggu konfirmasi owner.');
         } catch (\Exception $e) {
             DB::rollBack();
-
             Log::error('Failed to save order: ' . $e->getMessage(), [
                 'exception' => $e,
                 'trace' => $e->getTraceAsString(),
@@ -372,16 +375,27 @@ class OrderController extends Controller
                 'user_id' => Auth::id()
             ]);
 
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Gagal membuat pesanan: ' . $e->getMessage()
-                ], 400);
-            }
+            return $this->jsonOrRedirect($request, false, 'Gagal membuat pesanan: ' . $e->getMessage());
+        }
+    }
 
-            return redirect()->back()
-                ->with('error', 'Gagal membuat pesanan: ' . $e->getMessage())
-                ->withInput();
+    /**
+     * Helper untuk response JSON atau redirect.
+     */
+    private function jsonOrRedirect($request, $success, $message, $errors = null)
+    {
+        if ($request->ajax() || $request->wantsJson()) {
+            $response = ['success' => $success, 'message' => $message];
+            if ($errors) {
+                $response['errors'] = $errors;
+            }
+            return response()->json($response, $success ? 200 : 422);
+        }
+
+        if ($success) {
+            return redirect()->back()->with('success', $message);
+        } else {
+            return redirect()->back()->with('error', $message)->withInput();
         }
     }
 
