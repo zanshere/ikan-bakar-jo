@@ -7,7 +7,7 @@
 @section('content')
 <div class="space-y-6">
     {{-- Stats Cards --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <div class="bg-white rounded-xl shadow-sm p-6">
             <div class="flex items-center justify-between">
                 <div>

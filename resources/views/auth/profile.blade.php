@@ -126,6 +126,7 @@
 
                 <form method="POST" action="{{ route('profile.update') }}" class="p-6">
                     @csrf
+                    <input type="hidden" name="form_type" value="basic">
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {{-- Nama --}}
@@ -183,6 +184,7 @@
 
                 <form method="POST" action="{{ route('profile.update') }}" class="p-6">
                     @csrf
+                    <input type="hidden" name="form_type" value="password">
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {{-- Current Password --}}
