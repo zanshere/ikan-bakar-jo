@@ -19,7 +19,7 @@
 @section('content')
 <div class="space-y-6">
     {{-- Stats Cards --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <div class="bg-white rounded-xl shadow-sm p-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -84,7 +84,7 @@
     {{-- Filters --}}
     <div class="bg-white rounded-xl shadow-sm p-4">
         <form method="GET" action="{{ route('orders.index') }}" class="flex flex-wrap gap-4">
-            <div class="flex-1 min-w-50">
+            <div class="flex-1 min-w-0">
                 <input type="text" name="search" placeholder="Cari pesanan..." value="{{ request('search') }}"
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
             </div>

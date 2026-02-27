@@ -17,7 +17,7 @@
 @endsection
 
 @section('content')
-<div class="max-w-5xl mx-auto">
+<div class="w-full">
     @if(session('success'))
     <div class="mb-4 bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg">
         <div class="flex items-center">
@@ -37,9 +37,9 @@
     </div>
     @endif
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
         {{-- Left Column - Profile Card & Info --}}
-        <div class="lg:col-span-1">
+        <div class="xl:col-span-4">
             {{-- Profile Card --}}
             <div class="bg-white rounded-xl shadow-sm overflow-hidden sticky top-6">
                 <div class="px-6 py-8 bg-linear-to-r from-blue-600 to-blue-700 text-center">
@@ -114,7 +114,7 @@
         </div>
 
         {{-- Right Column - Forms --}}
-        <div class="lg:col-span-2 space-y-6">
+        <div class="xl:col-span-8 space-y-6">
             {{-- Informasi Dasar Form --}}
             <div class="bg-white rounded-xl shadow-sm overflow-hidden">
                 <div class="px-6 py-4 bg-gray-50 border-b">
@@ -126,6 +126,7 @@
 
                 <form method="POST" action="{{ route('profile.update') }}" class="p-6">
                     @csrf
+                    <input type="hidden" name="form_type" value="basic">
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {{-- Nama --}}
@@ -183,6 +184,7 @@
 
                 <form method="POST" action="{{ route('profile.update') }}" class="p-6">
                     @csrf
+                    <input type="hidden" name="form_type" value="password">
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {{-- Current Password --}}
