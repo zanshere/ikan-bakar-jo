@@ -16,11 +16,11 @@
             <i data-lucide="plus" class="w-4 h-4 mr-2"></i>
             Tambah Bahan
         </a>
-        <button onclick="exportStockReport()"
+        <a href="{{ route('reports.stock.pdf') }}" target="_blank"
             class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-green-700">
             <i data-lucide="download" class="w-4 h-4 mr-2"></i>
             Export
-        </button>
+        </a>
     </div>
 @endsection
 
@@ -338,16 +338,6 @@
         // Fungsi untuk menyembunyikan modal adjust stock
         function hideAdjustStockModal() {
             document.getElementById('adjustStockModal').classList.add('hidden');
-        }
-
-        // Fungsi untuk export laporan stok
-        function exportStockReport() {
-            showLoading();
-            // Simulasi proses export
-            setTimeout(() => {
-                hideLoading();
-                showToast('info', 'Fitur export akan segera hadir!');
-            }, 1000);
         }
 
         // Fungsi untuk menghapus bahan baku

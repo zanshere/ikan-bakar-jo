@@ -145,7 +145,7 @@
 @endsection
 
 @section('content')
-    <div class="max-w-6xl mx-auto">
+    <div class="w-full">
         {{-- Loading Overlay --}}
         <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
             <div class="flex items-center justify-center min-h-screen">
@@ -175,18 +175,18 @@
         </div>
 
         {{-- Main Content --}}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
             {{-- Menu Selection Column --}}
-            <div class="lg:col-span-2">
+            <div class="xl:col-span-8">
                 <div class="bg-white rounded-xl shadow-sm p-6">
-                    <div class="flex items-center justify-between mb-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
                         <h3 class="text-lg font-semibold text-gray-800">Pilih Menu</h3>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <i data-lucide="search" class="w-4 h-4 text-gray-400"></i>
                             </div>
                             <input type="text" id="menuSearch"
-                                class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 w-64"
+                                class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 w-full sm:w-64"
                                 placeholder="Cari menu...">
                         </div>
                     </div>
@@ -215,7 +215,7 @@
                     </div>
 
                     {{-- Menu Grid --}}
-                    <div id="menuGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <div id="menuGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         @foreach ($menus as $menu)
                             @php
                                 $category = strtolower($menu->category ?? 'lainnya');
@@ -279,8 +279,8 @@
             </div>
 
             {{-- Cart Column --}}
-            <div>
-                <form id="orderForm" method="POST" action="{{ route('orders.store') }}" class="space-y-6">
+            <div class="xl:col-span-4">
+                <form id="orderForm" method="POST" action="{{ route('orders.store') }}" class="space-y-6 xl:sticky xl:top-6">
                     @csrf
 
                     <div class="bg-white rounded-xl shadow-sm p-6">
@@ -303,7 +303,7 @@
 
                         {{-- Total Section --}}
                         <div class="space-y-3 border-t pt-4">
-                            <div class="flex justify-between items-center">
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                                 <span class="text-gray-600">Subtotal</span>
                                 <span class="font-medium text-lg" id="subtotalDisplay">Rp 0</span>
                             </div>
@@ -330,14 +330,14 @@
                     </div>
 
                     <div class="bg-white rounded-xl shadow-sm p-6">
-                        <div class="flex justify-between items-center">
+                        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                             <div>
                                 <p class="text-sm text-gray-600">Items: <span id="itemCount" class="font-medium">0</span>
                                 </p>
                                 <p class="text-xl font-bold text-gray-800" id="finalTotalDisplay">Rp 0</p>
                             </div>
                             <button type="button" id="submitButton"
-                                class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                class="w-full sm:w-auto px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 onclick="validateAndSubmitOrder()" disabled>
                                 <i data-lucide="check-circle" class="w-5 h-5 inline mr-2"></i>
                                 Buat Pesanan

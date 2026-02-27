@@ -101,11 +101,11 @@
             <!-- Logo -->
             <div class="p-6 border-b">
                 <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                        <i data-lucide="fish" class="w-6 h-6 text-white"></i>
+                    <div class="w-10 h-10 rounded-lg overflow-hidden border border-gray-200 bg-white shrink-0">
+                        <img src="{{ asset('images/IMG_1120.PNG') }}" alt="Logo Ikan Bakar Jo" class="w-full h-full object-cover">
                     </div>
                     <div>
-                        <h1 class="text-xl font-bold text-gray-800">Seafood Manager</h1>
+                        <h1 class="text-lg font-bold text-gray-800 leading-tight">Ikan Bakar Jo</h1>
                         <p class="text-xs text-gray-500">Restaurant Management</p>
                     </div>
                 </div>
