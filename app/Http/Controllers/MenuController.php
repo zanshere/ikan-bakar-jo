@@ -15,31 +15,37 @@ class MenuController extends Controller
 {
     public function index(Request $request)
     {
-        // dd(Menu::all());
         $query = Menu::with('ingredients');
 
         // Search filter
-        if ($request->has('search')) {
-            $search = $request->get('search');
-            $query->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
+        if ($request->filled('search')) {
+            $search = trim($request->get('search'));
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
+
+        // Type filter
+        if ($request->filled('type') && in_array($request->get('type'), [Menu::TYPE_MAIN, Menu::TYPE_SAUCE])) {
+            $query->where('type', $request->get('type'));
         }
 
         // Status filter
-        if ($request->has('status') && in_array($request->get('status'), ['active', 'inactive'])) {
+        if ($request->filled('status') && in_array($request->get('status'), ['active', 'inactive'])) {
             $query->where('is_active', $request->get('status') === 'active');
         }
 
         // Price range filter
-        if ($request->has('min_price')) {
-            $query->where('price', '>=', $request->get('min_price'));
+        if ($request->filled('min_price')) {
+            $query->where('price', '>=', (float) $request->get('min_price'));
         }
 
-        if ($request->has('max_price')) {
-            $query->where('price', '<=', $request->get('max_price'));
+        if ($request->filled('max_price')) {
+            $query->where('price', '<=', (float) $request->get('max_price'));
         }
 
-        $menus = $query->latest()->paginate(20);
+        $menus = $query->latest()->paginate(20)->withQueryString();
 
         return view('menus.index', compact('menus'));
     }
@@ -47,7 +53,11 @@ class MenuController extends Controller
     public function create()
     {
         $ingredients = Ingredient::orderBy('name')->get();
-        return view('menus.create', compact('ingredients'));
+        $types = [
+            Menu::TYPE_MAIN => 'Menu Utama',
+            Menu::TYPE_SAUCE => 'Saus'
+        ];
+        return view('menus.create', compact('ingredients', 'types'));
     }
 
     public function store(Request $request)
@@ -55,6 +65,7 @@ class MenuController extends Controller
         // Validasi
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'type' => 'required|in:' . Menu::TYPE_MAIN . ',' . Menu::TYPE_SAUCE,
             'price' => 'required|numeric|min:0',
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -62,6 +73,14 @@ class MenuController extends Controller
             'ingredients' => 'required|array|min:1',
             'ingredients.*.id' => 'required|exists:ingredients,id',
             'ingredients.*.quantity' => 'required|numeric|min:0.01',
+        ], [
+            'ingredients.required' => 'Menu harus memiliki bahan baku',
+            'ingredients.min' => 'Minimal 1 bahan baku harus ditambahkan',
+            'ingredients.*.id.required' => 'Pilih bahan baku',
+            'ingredients.*.id.exists' => 'Bahan baku tidak valid',
+            'ingredients.*.quantity.required' => 'Kuantitas bahan harus diisi',
+            'ingredients.*.quantity.numeric' => 'Kuantitas harus berupa angka',
+            'ingredients.*.quantity.min' => 'Kuantitas minimal 0.01',
         ]);
 
         // Handle image upload di luar transaksi dulu
@@ -93,6 +112,7 @@ class MenuController extends Controller
             // Prepare data for menu creation
             $menuData = [
                 'name' => $validated['name'],
+                'type' => $validated['type'],
                 'code' => $code,
                 'price' => $validated['price'],
                 'description' => $validated['description'] ?? null,
@@ -103,7 +123,7 @@ class MenuController extends Controller
             // Create menu
             $menu = Menu::create($menuData);
 
-            // Attach ingredients
+            // Attach ingredients (untuk semua tipe menu, baik main maupun sauce)
             foreach ($request->ingredients as $ingredientData) {
                 $menu->ingredients()->attach($ingredientData['id'], [
                     'quantity' => $ingredientData['quantity']
@@ -114,7 +134,6 @@ class MenuController extends Controller
 
             return redirect()->route('menus.index')
                 ->with('success', 'Menu berhasil ditambahkan');
-
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -138,27 +157,25 @@ class MenuController extends Controller
 
     public function show(Menu $menu)
     {
-        // Load ingredients dan saleItems DENGAN eager loading relasi sale dan user
         $menu->load([
             'ingredients',
-            'saleItems' => function($query) {
-                // Eager load relasi sale dan user dari sale
-                $query->with(['sale' => function($q) {
-                    $q->withTrashed(); // Include soft deleted sales
-                }, 'sale.user']) // Eager load user melalui relasi sale
-                ->whereHas('sale') // Hanya ambil saleItems yang memiliki sale
-                ->orderBy('created_at', 'desc')
-                ->limit(10); // Batasi 10 transaksi terakhir
+            'availableSauces', // Ini akan memuat relasi tanpa additional_price
+            'saleItems' => function ($query) {
+                $query->with(['sale' => function ($q) {
+                    $q->withTrashed();
+                }, 'sale.user'])
+                    ->whereHas('sale')
+                    ->orderBy('created_at', 'desc')
+                    ->limit(10);
             }
         ]);
 
-        // Hitung statistik dengan query terpisah untuk akurasi
         $totalSold = $menu->saleItems()
-            ->whereHas('sale') // Hanya hitung yang memiliki sale
+            ->whereHas('sale')
             ->sum('quantity');
 
         $totalRevenue = $menu->saleItems()
-            ->whereHas('sale') // Hanya hitung yang memiliki sale
+            ->whereHas('sale')
             ->sum('subtotal');
 
         return view('menus.show', compact('menu', 'totalSold', 'totalRevenue'));
@@ -168,6 +185,10 @@ class MenuController extends Controller
     {
         $menu->load('ingredients');
         $ingredients = Ingredient::orderBy('name')->get();
+        $types = [
+            Menu::TYPE_MAIN => 'Menu Utama',
+            Menu::TYPE_SAUCE => 'Saus'
+        ];
 
         $currentIngredients = [];
         foreach ($menu->ingredients as $ingredient) {
@@ -176,13 +197,14 @@ class MenuController extends Controller
 
         $ingredientCounter = count($currentIngredients);
 
-        return view('menus.edit', compact('menu', 'ingredients', 'currentIngredients', 'ingredientCounter'));
+        return view('menus.edit', compact('menu', 'ingredients', 'types', 'currentIngredients', 'ingredientCounter'));
     }
 
     public function update(Request $request, Menu $menu)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'type' => 'required|in:' . Menu::TYPE_MAIN . ',' . Menu::TYPE_SAUCE,
             'price' => 'required|numeric|min:0',
             'description' => 'nullable|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -190,6 +212,14 @@ class MenuController extends Controller
             'ingredients' => 'required|array|min:1',
             'ingredients.*.id' => 'required|exists:ingredients,id',
             'ingredients.*.quantity' => 'required|numeric|min:0.01',
+        ], [
+            'ingredients.required' => 'Menu harus memiliki bahan baku',
+            'ingredients.min' => 'Minimal 1 bahan baku harus ditambahkan',
+            'ingredients.*.id.required' => 'Pilih bahan baku',
+            'ingredients.*.id.exists' => 'Bahan baku tidak valid',
+            'ingredients.*.quantity.required' => 'Kuantitas bahan harus diisi',
+            'ingredients.*.quantity.numeric' => 'Kuantitas harus berupa angka',
+            'ingredients.*.quantity.min' => 'Kuantitas minimal 0.01',
         ]);
 
         DB::beginTransaction();
@@ -197,6 +227,7 @@ class MenuController extends Controller
         try {
             $menuData = [
                 'name' => $validated['name'],
+                'type' => $validated['type'],
                 'price' => $validated['price'],
                 'description' => $validated['description'] ?? null,
                 'is_active' => $request->has('is_active') ? (bool)$request->is_active : true,
@@ -238,7 +269,7 @@ class MenuController extends Controller
             // Update menu (code tidak berubah saat update)
             $menu->update($menuData);
 
-            // Sync ingredients
+            // Sync ingredients (untuk semua tipe menu, baik main maupun sauce)
             $ingredientsData = [];
             foreach ($request->ingredients as $ingredientData) {
                 $ingredientsData[$ingredientData['id']] = [
@@ -250,9 +281,8 @@ class MenuController extends Controller
 
             DB::commit();
 
-            return redirect()->route('menus.index')
+            return redirect()->route('menus.show', $menu)
                 ->with('success', 'Menu berhasil diperbarui');
-
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -343,7 +373,6 @@ class MenuController extends Controller
 
             return redirect()->route('menus.index')
                 ->with('success', 'Menu "' . $menuName . '" berhasil dihapus');
-
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -400,5 +429,89 @@ class MenuController extends Controller
                 ];
             }),
         ]);
+    }
+
+    /**
+     * Show form to manage sauce relationships for a menu.
+     */
+    public function manageSauces(Menu $menu)
+    {
+        // Check if menu is a main menu
+        if ($menu->type !== Menu::TYPE_MAIN) {
+            return redirect()->route('menus.show', $menu)
+                ->with('error', 'Hanya menu utama yang dapat memiliki pilihan saus');
+        }
+
+        // Get all active sauces
+        $sauces = Menu::where('type', Menu::TYPE_SAUCE)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        // Get currently attached sauces
+        $attachedSauces = $menu->availableSauces()
+            ->get()
+            ->keyBy('id');
+
+        return view('menus.manage-sauces', compact('menu', 'sauces', 'attachedSauces'));
+    }
+
+    /**
+     * Update sauce relationships for a menu.
+     */
+    public function updateSauces(Request $request, Menu $menu)
+    {
+        // Validate request
+        $validated = $request->validate([
+            'sauces' => 'required|array',
+            'sauces.*.id' => 'required|exists:menus,id',
+            'sauces.*.is_default' => 'sometimes|boolean',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $syncData = [];
+
+            foreach ($validated['sauces'] as $sauceData) {
+                $syncData[$sauceData['id']] = [
+                    'is_default' => isset($sauceData['is_default']) ? (bool)$sauceData['is_default'] : false,
+                ];
+            }
+
+            // Ensure only one default sauce
+            $defaultCount = collect($syncData)->filter(function ($data) {
+                return isset($data['is_default']) && $data['is_default'] === true;
+            })->count();
+
+            if ($defaultCount > 1) {
+                throw new \Exception('Hanya boleh memilih satu saus default');
+            }
+
+            // If no default selected but there are sauces, set first as default
+            if ($defaultCount === 0 && count($syncData) > 0) {
+                $firstKey = array_key_first($syncData);
+                $syncData[$firstKey]['is_default'] = true;
+            }
+
+            // Sync the relationships
+            $menu->availableSauces()->sync($syncData);
+
+            DB::commit();
+
+            return redirect()->route('menus.show', $menu)
+                ->with('success', 'Pilihan saus berhasil diperbarui');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Error updating menu sauces: ' . $e->getMessage(), [
+                'menu_id' => $menu->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return redirect()->back()
+                ->with('error', 'Gagal memperbarui pilihan saus: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 }

@@ -183,6 +183,7 @@
                             <tr>
                                 <td class="px-4 py-3">
                                     <div class="font-medium text-gray-900">{{ $ingredient->name }}</div>
+                                    <div class="text-xs text-gray-500">{{ $ingredient->unit }}</div>
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="font-medium text-gray-900">{{ number_format($ingredient->total_quantity, 2, ',', '.') }}</div>
@@ -224,6 +225,58 @@
         </div>
     </div>
 
+    <!-- Supplier Summary (if available) -->
+    @if(isset($supplierSummary) && count($supplierSummary) > 0)
+    <div class="bg-white rounded-xl shadow-sm">
+        <div class="p-6 border-b">
+            <h3 class="text-lg font-semibold text-gray-800">Analisis Supplier</h3>
+            <p class="text-sm text-gray-600 mt-1">Distribusi pengeluaran per supplier</p>
+        </div>
+
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah Transaksi</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Pengeluaran</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">% dari Total</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        @foreach($supplierSummary as $supplier)
+                        @php
+                            $supplierPercentage = $totalExpense > 0 ? ($supplier->total_amount / $totalExpense) * 100 : 0;
+                        @endphp
+                        <tr>
+                            <td class="px-4 py-3">
+                                <div class="font-medium text-gray-900">{{ $supplier->supplier ?? 'Unknown' }}</div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="font-medium text-gray-900">{{ $supplier->transaction_count }}</div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="font-bold text-red-600">Rp {{ number_format($supplier->total_amount, 0, ',', '.') }}</div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center">
+                                    <div class="w-full bg-gray-200 rounded-full h-2.5 mr-2">
+                                        <div class="bg-purple-600 h-2.5 rounded-full"
+                                             style="width: {{ $supplierPercentage }}%"></div>
+                                    </div>
+                                    <span class="text-sm font-medium">{{ number_format($supplierPercentage, 1) }}%</span>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- Recent Transactions -->
     <div class="bg-white rounded-xl shadow-sm">
         <div class="p-6 border-b">
@@ -251,16 +304,20 @@
                                 <a href="{{ route('restocks.show', $restock) }}" class="text-blue-600 hover:text-blue-800 font-medium">
                                     #{{ str_pad($restock->id, 6, '0', STR_PAD_LEFT) }}
                                 </a>
+                                @if($restock->supplier_name)
+                                <div class="text-xs text-gray-500">{{ $restock->supplier_name }}</div>
+                                @endif
                             </td>
                             <td class="px-4 py-3">
                                 <div class="text-sm text-gray-900">{{ $restock->date->format('d/m/Y') }}</div>
                                 <div class="text-xs text-gray-500">{{ $restock->created_at->format('H:i') }}</div>
                             </td>
                             <td class="px-4 py-3">
-                                <div class="text-sm text-gray-900">{{ $restock->user->name }}</div>
+                                <div class="text-sm text-gray-900">{{ $restock->user->name ?? 'System' }}</div>
                             </td>
                             <td class="px-4 py-3">
                                 <div class="text-sm text-gray-900">{{ $restock->items->count() }} bahan</div>
+                                <div class="text-xs text-gray-500">{{ number_format($restock->items->sum('quantity'), 2, ',', '.') }} total qty</div>
                             </td>
                             <td class="px-4 py-3">
                                 <div class="font-bold text-red-600">Rp {{ number_format($restock->total, 0, ',', '.') }}</div>
@@ -348,6 +405,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 x: {
                     grid: {
                         display: false
+                    },
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
                     }
                 },
                 y: {
@@ -384,6 +445,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     .shadow-sm {
         box-shadow: none !important;
+    }
+
+    table {
+        page-break-inside: auto;
+    }
+
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    tfoot {
+        display: table-footer-group;
     }
 }
 </style>

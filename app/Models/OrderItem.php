@@ -1,12 +1,12 @@
 <?php
-// app/Models/SaleItem.php
+// app/Models/OrderItem.php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class SaleItem extends Model
+class OrderItem extends Model
 {
     use HasFactory;
 
@@ -16,7 +16,7 @@ class SaleItem extends Model
      * @var array
      */
     protected $fillable = [
-        'sale_id',
+        'order_id',
         'menu_id',
         'sauce_id',
         'quantity',
@@ -51,11 +51,11 @@ class SaleItem extends Model
     ];
 
     /**
-     * Get the sale that owns this item.
+     * Get the order that owns this item.
      */
-    public function sale()
+    public function order()
     {
-        return $this->belongsTo(Sale::class);
+        return $this->belongsTo(Order::class);
     }
 
     /**
@@ -121,22 +121,9 @@ class SaleItem extends Model
     {
         parent::boot();
 
-        // When deleting a sale item, restore ingredient stock
-        static::deleting(function ($item) {
-            // Restore menu ingredients stock
-            if ($item->menu && $item->menu->ingredients) {
-                foreach ($item->menu->ingredients as $ingredient) {
-                    $returnQuantity = $ingredient->pivot->quantity * $item->quantity;
-                    $ingredient->increaseStock($returnQuantity);
-                }
-            }
-
-            // Restore sauce ingredients stock
-            if ($item->sauce && $item->sauce->ingredients) {
-                foreach ($item->sauce->ingredients as $ingredient) {
-                    $returnQuantity = $ingredient->pivot->quantity * $item->quantity;
-                    $ingredient->increaseStock($returnQuantity);
-                }
+        static::creating(function ($item) {
+            if (empty($item->subtotal)) {
+                $item->subtotal = ($item->price + $item->additional_price) * $item->quantity;
             }
         });
     }

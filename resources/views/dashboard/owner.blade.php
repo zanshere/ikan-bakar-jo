@@ -10,18 +10,24 @@
 @endsection
 
 @section('header-buttons')
-<div class="flex space-x-2">
+<div class="flex flex-wrap items-center gap-2 no-print">
+    <form method="GET" action="{{ route('dashboard') }}" class="flex flex-wrap items-center gap-2">
+        <input type="date" name="start_date" value="{{ $startDate }}" class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-700">
+        <input type="date" name="end_date" value="{{ $endDate }}" class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-700">
+        <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+            <i data-lucide="filter" class="w-4 h-4 mr-2"></i>
+            Terapkan
+        </button>
+    </form>
+
+    <a href="{{ route('dashboard') }}" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+        Reset
+    </a>
+
     <button onclick="printPage()" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
         <i data-lucide="printer" class="w-4 h-4 mr-2"></i>
         Cetak
     </button>
-
-    <div class="relative">
-        <button id="dateRangeButton" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-            <i data-lucide="calendar" class="w-4 h-4 mr-2"></i>
-            Filter Tanggal
-        </button>
-    </div>
 </div>
 @endsection
 
@@ -84,7 +90,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="bg-white rounded-xl shadow-sm p-6">
             <div class="flex items-center justify-between mb-6">
-                <h3 class="text-lg font-semibold text-gray-800">Pendapatan 30 Hari Terakhir</h3>
+                <h3 class="text-lg font-semibold text-gray-800">Pendapatan Periode Dipilih</h3>
                 <div class="flex space-x-2">
                     <button class="p-2 hover:bg-gray-100 rounded-lg" onclick="refreshIncomeChart()">
                         <i data-lucide="refresh-cw" class="w-4 h-4"></i>
@@ -98,7 +104,7 @@
 
         <div class="bg-white rounded-xl shadow-sm p-6">
             <div class="flex items-center justify-between mb-6">
-                <h3 class="text-lg font-semibold text-gray-800">Pengeluaran 30 Hari Terakhir</h3>
+                <h3 class="text-lg font-semibold text-gray-800">Pengeluaran Periode Dipilih</h3>
                 <div class="flex space-x-2">
                     <button class="p-2 hover:bg-gray-100 rounded-lg" onclick="refreshExpenseChart()">
                         <i data-lucide="refresh-cw" class="w-4 h-4"></i>
@@ -387,17 +393,6 @@ function refreshExpenseChart() {
 document.addEventListener('DOMContentLoaded', function() {
     initIncomeChart();
     initExpenseChart();
-
-    // Date range picker
-    const dateRangeButton = document.getElementById('dateRangeButton');
-    if (dateRangeButton) {
-        new HSDatepicker(dateRangeButton, {
-            range: true,
-            format: 'dd/mm/yyyy',
-            clearButton: true,
-            todayButton: true,
-        });
-    }
 });
 </script>
 @endpush

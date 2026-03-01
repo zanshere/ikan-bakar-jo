@@ -1,601 +1,549 @@
-<!-- resources/views/menus/edit.blade.php -->
+{{-- resources/views/menus/edit.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Edit Menu - Seafood Management')
-
-@section('page-title', 'Edit Menu')
-@section('page-description', 'Edit data menu "' . $menu->name . '"')
+@section('page-title', 'Edit Menu - ' . $menu->name)
+@section('page-description', 'Perbarui informasi menu')
 
 @section('breadcrumb')
-    <i data-lucide="chevron-right" class="w-4 h-4"></i>
-    <a href="{{ route('menus.index') }}" class="text-gray-500 hover:text-gray-700">Menu</a>
-    <i data-lucide="chevron-right" class="w-4 h-4"></i>
-    <span class="text-gray-700 font-medium">Edit</span>
+<span>/</span>
+<a href="{{ route('menus.index') }}" class="text-gray-500 hover:text-gray-700">Menu</a>
+<span>/</span>
+<a href="{{ route('menus.show', $menu) }}" class="text-gray-500 hover:text-gray-700">{{ $menu->name }}</a>
+<span>/</span>
+<span class="text-gray-700">Edit</span>
 @endsection
 
 @section('header-buttons')
-    <a href="{{ route('menus.show', $menu) }}" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50">
-        <i data-lucide="eye" class="w-4 h-4 mr-2"></i>Lihat Detail
+<div class="flex space-x-2">
+    <a href="{{ route('menus.show', $menu) }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        <i data-lucide="eye" class="w-4 h-4 mr-2"></i>Detail
     </a>
-    <a href="{{ route('menus.index') }}" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg shadow-sm text-sm font-medium hover:bg-gray-700">
+    <a href="{{ route('menus.index') }}" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
         <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i>Kembali
     </a>
+</div>
 @endsection
 
-@push('styles')
-    <style>
-        .ingredient-row {
-            transition: all 0.3s ease;
-            position: relative;
-        }
-        .ingredient-row.removing {
-            opacity: 0.5;
-            background-color: #fee2e2;
-            transform: translateX(10px);
-        }
-        .ingredient-row.border-red-500 {
-            border: 2px solid #ef4444 !important;
-        }
-        .toastify {
-            padding: 12px 20px;
-            color: white;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-    </style>
-@endpush
-
 @section('content')
-    <div class="max-w-7xl mx-auto">
-        @if(session('success'))
-            <div class="mb-6 rounded-lg bg-green-50 p-4">
-                <div class="flex">
-                    <div class="shrink-0"><i data-lucide="check-circle" class="w-5 h-5 text-green-400"></i></div>
-                    <div class="ml-3"><p class="text-sm font-medium text-green-800">{{ session('success') }}</p></div>
-                </div>
-            </div>
-        @endif
+<div class="max-w-4xl mx-auto">
+    @if($errors->any())
+    <div class="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+        <ul class="list-disc list-inside">
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+    @endif
 
-        @if($errors->any())
-            <div class="mb-6 rounded-lg bg-red-50 p-4">
-                <div class="flex">
-                    <div class="shrink-0"><i data-lucide="alert-circle" class="w-5 h-5 text-red-400"></i></div>
-                    <div class="ml-3">
-                        <h3 class="text-sm font-medium text-red-800">Terdapat {{ $errors->count() }} kesalahan:</h3>
-                        <div class="mt-2 text-sm text-red-700">
-                            <ul class="list-disc pl-5 space-y-1">
-                                @foreach($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        @endif
-
-        <form action="{{ route('menus.update', $menu) }}" method="POST" enctype="multipart/form-data" id="menuForm">
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <form method="POST" action="{{ route('menus.update', $menu) }}"
+              enctype="multipart/form-data" class="space-y-6 show-loading">
             @csrf
             @method('PUT')
 
-            <div class="bg-white shadow-lg rounded-xl overflow-hidden">
-                <div class="p-6">
-                    <!-- Basic Information -->
-                    <div class="pb-6">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                            <i data-lucide="info" class="w-5 h-5 mr-2 text-blue-600"></i>Informasi Dasar
-                        </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Kode Menu <span class="text-red-500">*</span></label>
-                                <input type="text" name="code" value="{{ old('code', $menu->code) }}" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50" readonly>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Nama Menu <span class="text-red-500">*</span></label>
-                                <input type="text" name="name" id="name" value="{{ old('name', $menu->name) }}" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Harga (Rp) <span class="text-red-500">*</span></label>
-                                <input type="number" name="price" id="price" value="{{ old('price', $menu->price) }}" required min="0" step="100" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                                <div class="flex items-center h-11">
-                                    <input type="hidden" name="is_active" value="0">
-                                    <input type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', $menu->is_active) ? 'checked' : '' }} class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300">
-                                    <label for="is_active" class="ml-3 text-sm text-gray-700">Menu Aktif</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mt-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Deskripsi</label>
-                            <textarea name="description" rows="3" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">{{ old('description', $menu->description) }}</textarea>
-                        </div>
-
-                        <!-- Image Upload -->
-                        <div class="mt-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Gambar Menu</label>
-                            <div class="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
-                                <div class="shrink-0 relative group" id="imagePreviewWrapper">
-                                    @if($menu->image && Storage::disk('public')->exists($menu->image))
-                                        <img id="imagePreview" src="{{ Storage::url($menu->image) }}" alt="{{ $menu->name }}" class="h-40 w-40 object-cover rounded-lg border-2 border-gray-200 shadow-sm">
-                                        <button type="button" onclick="removeImage()" class="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700">
-                                            <i data-lucide="x" class="w-4 h-4"></i>
-                                        </button>
-                                    @else
-                                        <div id="imagePreviewContainer" class="h-40 w-40 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center">
-                                            <i data-lucide="image" class="w-12 h-12 text-gray-400 mb-2"></i>
-                                            <span class="text-xs text-gray-500">Belum ada gambar</span>
-                                        </div>
-                                    @endif
-                                </div>
-                                <div class="flex-1">
-                                    <input type="file" name="image" id="image" accept="image/jpeg,image/png,image/jpg,image/gif" class="hidden">
-                                    <button type="button" onclick="document.getElementById('image').click()" class="inline-flex items-center px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                                        <i data-lucide="upload" class="w-4 h-4 mr-2"></i>Pilih Gambar
-                                    </button>
-                                    <span id="fileName" class="ml-3 text-sm text-gray-500">
-                                        @if($menu->image){{ basename($menu->image) }}@else Belum ada file dipilih @endif
-                                    </span>
-                                    <p class="text-xs text-gray-500 mt-2"><i data-lucide="info" class="w-3 h-3 inline mr-1"></i>Format: JPG, PNG, GIF (Maks. 2MB, 400x400px)</p>
-                                </div>
-                            </div>
-                            <input type="hidden" name="remove_image" id="removeImageInput" value="0">
-                        </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Basic Information -->
+                <div class="space-y-4">
+                    <div>
+                        <label for="code" class="block text-sm font-medium text-gray-700 mb-1">Kode Menu</label>
+                        <input type="text" id="code" name="code"
+                               value="{{ $menu->code }}"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                               readonly>
                     </div>
 
-                    <!-- Ingredients Section -->
-                    <div class="pb-6">
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-lg font-semibold text-gray-800 flex items-center">
-                                <i data-lucide="package" class="w-5 h-5 mr-2 text-green-600"></i>
-                                Bahan-bahan
-                                <span id="ingredientCount" class="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">{{ count($currentIngredients) }}</span>
-                            </h3>
-                            <button type="button" onclick="addIngredientRow()" class="inline-flex items-center px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                <i data-lucide="plus" class="w-4 h-4 mr-2"></i>Tambah Bahan
-                            </button>
-                        </div>
-
-                        <div id="ingredientsContainer" class="space-y-4">
-                            @php $ingredientCounter = 0; @endphp
-                            @foreach($currentIngredients as $ingredientId => $quantity)
-                                @php
-                                    $ingredient = $ingredients->firstWhere('id', $ingredientId);
-                                    if (!$ingredient) continue;
-                                @endphp
-                                <div class="ingredient-row bg-gray-50 p-4 rounded-lg border border-gray-200" data-index="{{ $ingredientCounter }}">
-                                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                                        <div class="md:col-span-5">
-                                            <label class="block text-sm font-medium text-gray-700 mb-2">Bahan <span class="text-red-500">*</span></label>
-                                            <select name="ingredients[{{ $ingredientCounter }}][id]" onchange="updateIngredientRow(this)" class="ingredient-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-                                                <option value="">Pilih Bahan</option>
-                                                @foreach($ingredients as $ing)
-                                                    <option value="{{ $ing->id }}" {{ $ingredientId == $ing->id ? 'selected' : '' }} data-unit="{{ $ing->unit }}" data-price="{{ $ing->price }}">{{ $ing->name }} (Stok: {{ $ing->formatted_stock }})</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div class="md:col-span-3">
-                                            <label class="block text-sm font-medium text-gray-700 mb-2">Jumlah <span class="text-red-500">*</span></label>
-                                            <div class="flex">
-                                                <input type="number" name="ingredients[{{ $ingredientCounter }}][quantity]" value="{{ $quantity }}" step="0.01" min="0.01" required oninput="updateIngredientRow(this)" class="quantity-input flex-1 px-3 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                                <span class="unit-display inline-flex items-center px-4 border border-l-0 border-gray-300 bg-gray-100 text-gray-600 rounded-r-lg">{{ $ingredient->unit }}</span>
-                                            </div>
-                                        </div>
-                                        <div class="md:col-span-3">
-                                            <label class="block text-sm font-medium text-gray-700 mb-2">Subtotal</label>
-                                            <div class="p-3 bg-white border border-gray-300 rounded-lg">
-                                                <span class="subtotal-display text-sm font-medium text-gray-900">Rp {{ number_format($quantity * $ingredient->price, 0, ',', '.') }}</span>
-                                            </div>
-                                        </div>
-                                        <div class="md:col-span-1">
-                                            <button type="button" onclick="removeIngredientRow(this)" class="remove-ingredient-btn w-full h-10 inline-flex items-center justify-center px-3 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                @php $ingredientCounter++; @endphp
+                    <div>
+                        <label for="type" class="block text-sm font-medium text-gray-700 mb-1">Tipe Menu *</label>
+                        <select id="type" name="type" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                onchange="toggleTypeInfo()">
+                            @foreach($types as $value => $label)
+                            <option value="{{ $value }}" {{ $menu->type == $value ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
                             @endforeach
-                        </div>
+                        </select>
+                    </div>
 
-                        <!-- Empty State -->
-                        <div id="emptyIngredientsState" class="text-center py-8 {{ $ingredientCounter > 0 ? 'hidden' : '' }}">
-                            <div class="bg-gray-50 rounded-lg p-8 border-2 border-dashed border-gray-300">
-                                <i data-lucide="package" class="w-12 h-12 text-gray-400 mx-auto mb-3"></i>
-                                <p class="text-gray-600 font-medium">Belum ada bahan yang ditambahkan</p>
-                                <p class="text-sm text-gray-500 mt-1">Klik tombol "Tambah Bahan" untuk mulai menambahkan</p>
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nama *</label>
+                        <input type="text" id="name" name="name"
+                               value="{{ old('name', $menu->name) }}"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 @error('name') border-red-500 @enderror"
+                               required>
+                        @error('name')
+                            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="price" class="block text-sm font-medium text-gray-700 mb-1">Harga (Rp) *</label>
+                        <input type="number" id="price" name="price" min="0" step="100"
+                               value="{{ old('price', $menu->price) }}"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 @error('price') border-red-500 @enderror"
+                               required>
+                        @error('price')
+                            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
+                <!-- Image & Status -->
+                <div class="space-y-4">
+                    <div>
+                        <label for="image" class="block text-sm font-medium text-gray-700 mb-1">Gambar</label>
+                        <div class="mt-1 flex items-center space-x-4">
+                            <div class="relative group">
+                                @if($menu->image)
+                                <img id="imagePreview" src="{{ Storage::url($menu->image) }}"
+                                     alt="{{ $menu->name }}"
+                                     class="h-32 w-32 object-cover rounded-lg border">
+                                <button type="button" onclick="removeImage()"
+                                        class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <i data-lucide="x" class="w-3 h-3"></i>
+                                </button>
+                                @else
+                                <div id="imagePreviewContainer" class="h-32 w-32 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+                                    <i data-lucide="image" class="w-8 h-8 text-gray-400"></i>
+                                </div>
+                                @endif
                             </div>
-                        </div>
-
-                        <!-- Total Cost Summary -->
-                        <div class="mt-8 pt-6 border-t border-gray-200">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div class="bg-gray-50 p-5 rounded-xl border border-gray-200">
-                                    <label class="block text-sm font-medium text-gray-600 mb-2">Total Biaya Bahan</label>
-                                    <span id="totalCostDisplay" class="text-2xl font-bold text-gray-900">Rp 0</span>
-                                </div>
-                                <div class="bg-blue-50 p-5 rounded-xl border border-blue-200">
-                                    <label class="block text-sm font-medium text-blue-700 mb-2">Harga Menu</label>
-                                    <span id="priceDisplay" class="text-2xl font-bold text-blue-900">Rp {{ number_format($menu->price, 0, ',', '.') }}</span>
-                                </div>
-                                <div id="profitContainer" class="bg-green-50 p-5 rounded-xl border border-green-200">
-                                    <label class="block text-sm font-medium text-green-700 mb-2">Estimasi Laba</label>
-                                    <span id="profitDisplay" class="text-2xl font-bold text-green-900">Rp 0</span>
-                                </div>
+                            <div class="flex-1">
+                                <input type="file" id="image" name="image"
+                                       accept="image/*"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                       onchange="previewImage(this)">
+                                <p class="mt-1 text-xs text-gray-500">Format: JPG, PNG, GIF. Maks: 2MB</p>
+                                <input type="hidden" name="remove_image" id="removeImageInput" value="0">
                             </div>
                         </div>
                     </div>
 
-                    <!-- Form Actions -->
-                    <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-                        <a href="{{ route('menus.index') }}" class="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50">
-                            <i data-lucide="x" class="w-4 h-4 mr-2 inline"></i>Batal
-                        </a>
-                        <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                            <i data-lucide="save" class="w-4 h-4 mr-2 inline"></i>Simpan Perubahan
-                        </button>
+                    <div>
+                        <label for="is_active" class="flex items-center">
+                            <input type="checkbox" id="is_active" name="is_active" value="1"
+                                   {{ old('is_active', $menu->is_active) ? 'checked' : '' }}
+                                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <span class="ml-2 text-sm text-gray-700">Aktifkan menu</span>
+                        </label>
                     </div>
                 </div>
             </div>
+
+            <!-- Description -->
+            <div>
+                <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+                <textarea id="description" name="description" rows="3"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">{{ old('description', $menu->description) }}</textarea>
+            </div>
+
+            <!-- Type Info -->
+            <div id="typeInfoMain" class="p-4 bg-blue-50 rounded-lg {{ $menu->type === 'sauce' ? 'hidden' : '' }}">
+                <div class="flex items-center">
+                    <i data-lucide="info" class="w-5 h-5 text-blue-600 mr-2"></i>
+                    <div>
+                        <p class="text-sm text-blue-800">
+                            <strong>Menu Utama</strong> - Item ini akan ditampilkan di halaman pemesanan dan dapat dipilih oleh pelanggan.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="typeInfoSauce" class="p-4 bg-purple-50 rounded-lg {{ $menu->type === 'sauce' ? '' : 'hidden' }}">
+                <div class="flex items-center">
+                    <i data-lucide="info" class="w-5 h-5 text-purple-600 mr-2"></i>
+                    <div>
+                        <p class="text-sm text-purple-800">
+                            <strong>Saus</strong> - Item ini adalah saus yang dapat dipilih sebagai pelengkap menu utama.
+                            Saus tetap memerlukan bahan baku seperti cabai, bawang, bumbu dapur, dll.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ingredients Section (untuk semua tipe menu) -->
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <label class="block text-sm font-medium text-gray-700">
+                        Bahan Baku <span class="text-red-500">*</span>
+                        <span class="text-xs text-gray-500 ml-2">(Minimal 1 bahan)</span>
+                    </label>
+                    <button type="button" onclick="addIngredientRow()"
+                            class="inline-flex items-center px-3 py-1.5 text-sm bg-green-100 text-green-800 rounded-lg hover:bg-green-200">
+                        <i data-lucide="plus" class="w-4 h-4 mr-1"></i>
+                        Tambah Bahan
+                    </button>
+                </div>
+
+                <div id="ingredients-container" class="space-y-3">
+                    @php $ingredientIndex = 0; @endphp
+                    @forelse($menu->ingredients as $ingredient)
+                    <div class="ingredient-row grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-gray-50 rounded-lg" data-index="{{ $ingredientIndex }}">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Bahan</label>
+                            <select name="ingredients[{{ $ingredientIndex }}][id]"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 ingredient-select"
+                                    onchange="updateIngredientPrice(this, {{ $ingredientIndex }})" required>
+                                <option value="">Pilih Bahan</option>
+                                @foreach($ingredients as $ing)
+                                <option value="{{ $ing->id }}"
+                                        data-price="{{ $ing->price }}"
+                                        data-unit="{{ $ing->unit }}"
+                                        data-stock="{{ $ing->stock }}"
+                                        {{ $ing->id == $ingredient->id ? 'selected' : '' }}>
+                                    {{ $ing->name }} ({{ $ing->code }})
+                                </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Kuantitas</label>
+                            <div class="relative">
+                                <input type="number" name="ingredients[{{ $ingredientIndex }}][quantity]"
+                                       value="{{ $ingredient->pivot->quantity }}"
+                                       step="0.01" min="0.01"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                       onchange="calculateIngredientCost({{ $ingredientIndex }})" required>
+                                <span class="absolute right-3 top-2 text-sm text-gray-500 unit-display"
+                                      id="unit-{{ $ingredientIndex }}">{{ $ingredient->unit }}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-end space-x-2">
+                            <div class="flex-1">
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Biaya</label>
+                                <input type="text" id="cost-{{ $ingredientIndex }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100"
+                                       value="Rp {{ number_format($ingredient->price * $ingredient->pivot->quantity, 0, ',', '.') }}"
+                                       readonly>
+                            </div>
+                            <button type="button" onclick="removeIngredientRow(this)"
+                                    class="px-3 py-2 text-red-600 hover:text-red-800">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                    @php $ingredientIndex++; @endphp
+                    @empty
+                    <div class="ingredient-row grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Bahan</label>
+                            <select name="ingredients[0][id]"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 ingredient-select"
+                                    onchange="updateIngredientPrice(this, 0)" required>
+                                <option value="">Pilih Bahan</option>
+                                @foreach($ingredients as $ingredient)
+                                <option value="{{ $ingredient->id }}"
+                                        data-price="{{ $ingredient->price }}"
+                                        data-unit="{{ $ingredient->unit }}"
+                                        data-stock="{{ $ingredient->stock }}">
+                                    {{ $ingredient->name }} ({{ $ingredient->code }})
+                                </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Kuantitas</label>
+                            <div class="relative">
+                                <input type="number" name="ingredients[0][quantity]"
+                                       step="0.01" min="0.01"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                       onchange="calculateIngredientCost(0)" required>
+                                <span class="absolute right-3 top-2 text-sm text-gray-500 unit-display"
+                                      id="unit-0">unit</span>
+                            </div>
+                        </div>
+                        <div class="flex items-end space-x-2">
+                            <div class="flex-1">
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Biaya</label>
+                                <input type="text" id="cost-0"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100"
+                                       value="Rp 0" readonly>
+                            </div>
+                            <button type="button" onclick="removeIngredientRow(this)"
+                                    class="px-3 py-2 text-red-600 hover:text-red-800">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                    @endforelse
+                </div>
+
+                <!-- Summary -->
+                <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-700">Total Biaya Bahan:</p>
+                            <p class="text-lg font-bold text-blue-600" id="total-cost">
+                                @if($menu->type === 'main')
+                                    {{ $menu->formatted_cost }}
+                                @else
+                                    Rp 0
+                                @endif
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-700">Harga Menu:</p>
+                            <p class="text-lg font-bold text-gray-800" id="menu-price-display">
+                                {{ $menu->formatted_price }}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-700">Estimasi Profit:</p>
+                            <p class="text-lg font-bold {{ $menu->type === 'main' ? ($menu->profit >= 0 ? 'text-green-600' : 'text-red-600') : 'text-gray-400' }}"
+                               id="profit-display">
+                                @if($menu->type === 'main')
+                                    {{ $menu->formatted_profit }}
+                                @else
+                                    -
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="text-xs text-gray-500 mt-2">
+                    <i data-lucide="info" class="w-3 h-3 inline mr-1"></i>
+                    @if($menu->type === 'main')
+                        Profit dihitung dari harga menu dikurangi total biaya bahan.
+                    @else
+                        Untuk menu tipe saus, profit dihitung saat digabungkan dengan menu utama.
+                    @endif
+                </p>
+            </div>
+
+            <!-- Submit -->
+            <div class="flex justify-end space-x-3 pt-6 border-t">
+                <a href="{{ route('menus.show', $menu) }}"
+                   class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    Batal
+                </a>
+                <button type="submit"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Perbarui
+                </button>
+            </div>
         </form>
     </div>
+</div>
 @endsection
 
 @push('scripts')
-    <!-- Toastify JS -->
-    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+<script>
+let ingredientCount = {{ max($menu->ingredients->count(), 1) }};
+let selectedIngredients = new Set();
 
-    <script>
-        // ================ GLOBAL VARIABLES ================
-        let ingredientCounter = {{ $ingredientCounter }};
-
-        // ================ INITIALIZATION ================
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('=== EDIT MENU INITIALIZED ===');
-
-            // Setup price input listener
-            const priceInput = document.getElementById('price');
-            if (priceInput) {
-                priceInput.addEventListener('input', calculateTotal);
-            }
-
-            // Setup file input listener
-            const fileInput = document.getElementById('image');
-            if (fileInput) {
-                fileInput.addEventListener('change', previewImage);
-            }
-
-            // Initial calculations
-            calculateTotal();
-            updateIngredientCount();
-            checkEmptyState();
-
-            // Refresh Lucide icons
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-
-            console.log('Ready. Ingredient rows:', document.querySelectorAll('.ingredient-row').length);
-        });
-
-        // ================ IMAGE FUNCTIONS ================
-        function previewImage(event) {
-            console.log('previewImage called');
-            const file = event.target.files[0];
-            if (!file) return;
-
-            if (!file.type.match('image.*')) {
-                showToast('error', 'File harus berupa gambar');
-                return;
-            }
-
-            if (file.size > 2 * 1024 * 1024) {
-                showToast('error', 'Ukuran file maksimal 2MB');
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const wrapper = document.getElementById('imagePreviewWrapper');
-                const existingImg = document.getElementById('imagePreview');
-                const existingContainer = document.getElementById('imagePreviewContainer');
-                const fileNameSpan = document.getElementById('fileName');
-
-                if (fileNameSpan) fileNameSpan.textContent = file.name;
-
-                if (existingImg) {
-                    existingImg.src = e.target.result;
-                } else if (existingContainer) {
-                    const img = document.createElement('img');
-                    img.id = 'imagePreview';
-                    img.src = e.target.result;
-                    img.alt = 'Preview';
-                    img.className = 'h-40 w-40 object-cover rounded-lg border-2 border-blue-500 shadow-sm';
-                    existingContainer.replaceWith(img);
-
-                    const removeBtn = document.createElement('button');
-                    removeBtn.type = 'button';
-                    removeBtn.setAttribute('onclick', 'removeImage()');
-                    removeBtn.className = 'absolute top-2 right-2 bg-red-600 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700';
-                    removeBtn.innerHTML = '<i data-lucide="x" class="w-4 h-4"></i>';
-                    wrapper.appendChild(removeBtn);
-                }
-
-                document.getElementById('removeImageInput').value = '0';
-
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-                showToast('success', 'Gambar berhasil dipilih');
-            };
-
-            reader.readAsDataURL(file);
+// Initialize selected ingredients
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.ingredient-select').forEach(select => {
+        if (select.value) {
+            selectedIngredients.add(select.value);
         }
+    });
 
-        function removeImage() {
-            console.log('removeImage called');
-            if (!confirm('Hapus gambar ini?')) return;
+    const priceInput = document.getElementById('price');
+    if (priceInput) {
+        priceInput.addEventListener('input', updateTotalCost);
+    }
 
-            const wrapper = document.getElementById('imagePreviewWrapper');
-            const img = document.getElementById('imagePreview');
-            const removeBtn = document.querySelector('#imagePreviewWrapper button');
-            const fileNameSpan = document.getElementById('fileName');
-            const fileInput = document.getElementById('image');
+    // Add event listener for type change
+    document.getElementById('type').addEventListener('change', function() {
+        updateTotalCost();
+    });
 
-            if (img) img.remove();
-            if (removeBtn) removeBtn.remove();
+    toggleTypeInfo();
 
-            const container = document.createElement('div');
-            container.id = 'imagePreviewContainer';
-            container.className = 'h-40 w-40 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center';
-            container.innerHTML = '<i data-lucide="image" class="w-12 h-12 text-gray-400 mb-2"></i><span class="text-xs text-gray-500">Belum ada gambar</span>';
-            wrapper.appendChild(container);
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
 
-            if (fileNameSpan) fileNameSpan.textContent = 'Belum ada file dipilih';
-            if (fileInput) fileInput.value = '';
+function toggleTypeInfo() {
+    const type = document.getElementById('type').value;
+    const infoMain = document.getElementById('typeInfoMain');
+    const infoSauce = document.getElementById('typeInfoSauce');
 
-            document.getElementById('removeImageInput').value = '1';
+    if (type === 'sauce') {
+        infoMain.classList.add('hidden');
+        infoSauce.classList.remove('hidden');
+    } else {
+        infoMain.classList.remove('hidden');
+        infoSauce.classList.add('hidden');
+    }
+}
 
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-            showToast('success', 'Gambar dihapus');
-        }
-
-        // ================ INGREDIENT FUNCTIONS ================
-        function addIngredientRow() {
-            console.log('addIngredientRow called. Counter:', ingredientCounter);
-
-            const container = document.getElementById('ingredientsContainer');
-            if (!container) return;
-
-            const index = ingredientCounter;
-            const row = document.createElement('div');
-            row.className = 'ingredient-row bg-gray-50 p-4 rounded-lg border border-gray-200';
-            row.setAttribute('data-index', index);
-
-            let options = '<option value="">Pilih Bahan</option>';
-            @foreach($ingredients as $ingredient)
-                options += `<option value="{{ $ingredient->id }}" data-unit="{{ $ingredient->unit }}" data-price="{{ $ingredient->price }}">{{ $ingredient->name }} (Stok: {{ $ingredient->formatted_stock }})</option>`;
-            @endforeach
-
-            row.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                    <div class="md:col-span-5">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Bahan <span class="text-red-500">*</span></label>
-                        <select name="ingredients[${index}][id]" onchange="updateIngredientRow(this)" class="ingredient-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-                            ${options}
-                        </select>
-                    </div>
-                    <div class="md:col-span-3">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Jumlah <span class="text-red-500">*</span></label>
-                        <div class="flex">
-                            <input type="number" name="ingredients[${index}][quantity]" value="1" step="0.01" min="0.01" required oninput="updateIngredientRow(this)" class="quantity-input flex-1 px-3 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <span class="unit-display inline-flex items-center px-4 border border-l-0 border-gray-300 bg-gray-100 text-gray-600 rounded-r-lg">unit</span>
-                        </div>
-                    </div>
-                    <div class="md:col-span-3">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Subtotal</label>
-                        <div class="p-3 bg-white border border-gray-300 rounded-lg">
-                            <span class="subtotal-display text-sm font-medium text-gray-900">Rp 0</span>
-                        </div>
-                    </div>
-                    <div class="md:col-span-1">
-                        <button type="button" onclick="removeIngredientRow(this)" class="remove-ingredient-btn w-full h-10 inline-flex items-center justify-center px-3 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                            <i data-lucide="trash-2" class="w-4 h-4"></i>
-                        </button>
-                    </div>
+function addIngredientRow() {
+    const index = ingredientCount;
+    const container = document.getElementById('ingredients-container');
+    const template = `
+        <div class="ingredient-row grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-gray-50 rounded-lg">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Bahan</label>
+                <select name="ingredients[${index}][id]"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 ingredient-select"
+                        onchange="updateIngredientPrice(this, ${index})" required>
+                    <option value="">Pilih Bahan</option>
+                    @foreach($ingredients as $ingredient)
+                    <option value="{{ $ingredient->id }}"
+                            data-price="{{ $ingredient->price }}"
+                            data-unit="{{ $ingredient->unit }}"
+                            data-stock="{{ $ingredient->stock }}">
+                        {{ $ingredient->name }} ({{ $ingredient->code }})
+                    </option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Kuantitas</label>
+                <div class="relative">
+                    <input type="number" name="ingredients[${index}][quantity]"
+                           step="0.01" min="0.01"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                           onchange="calculateIngredientCost(${index})" required>
+                    <span class="absolute right-3 top-2 text-sm text-gray-500 unit-display"
+                          id="unit-${index}">unit</span>
                 </div>
-            `;
+            </div>
+            <div class="flex items-end space-x-2">
+                <div class="flex-1">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Biaya</label>
+                    <input type="text" id="cost-${index}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100"
+                           value="Rp 0" readonly>
+                </div>
+                <button type="button" onclick="removeIngredientRow(this)"
+                        class="px-3 py-2 text-red-600 hover:text-red-800">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', template);
+    ingredientCount++;
+    updateTotalCost();
+}
 
-            container.appendChild(row);
+function removeIngredientRow(button) {
+    const row = button.closest('.ingredient-row');
+    const select = row.querySelector('.ingredient-select');
+    if (select && select.value) {
+        selectedIngredients.delete(select.value);
+    }
+    row.remove();
+    updateTotalCost();
+}
 
-            ingredientCounter++;
+function updateIngredientPrice(select, index) {
+    const selectedOption = select.options[select.selectedIndex];
+    const unit = selectedOption.dataset.unit || '';
+    const price = parseFloat(selectedOption.dataset.price) || 0;
 
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+    document.getElementById(`unit-${index}`).textContent = unit;
 
-            calculateTotal();
-            updateIngredientCount();
-            checkEmptyState();
-
-            showToast('success', 'Bahan ditambahkan');
-            console.log('Row added. New counter:', ingredientCounter);
+    if (select.value) {
+        if (selectedIngredients.has(select.value)) {
+            alert('Bahan ini sudah dipilih!');
+            select.value = '';
+            document.getElementById(`unit-${index}`).textContent = 'unit';
+            return;
         }
+        selectedIngredients.add(select.value);
+    }
 
-        function removeIngredientRow(button) {
-            console.log('removeIngredientRow called');
+    calculateIngredientCost(index);
+}
 
-            const row = button.closest('.ingredient-row');
-            if (!row) return;
+function calculateIngredientCost(index) {
+    const select = document.querySelector(`select[name="ingredients[${index}][id]"]`);
+    const quantityInput = document.querySelector(`input[name="ingredients[${index}][quantity]"]`);
+    const costInput = document.getElementById(`cost-${index}`);
 
-            if (!confirm('Hapus bahan ini?')) return;
+    if (!select || !select.value || !quantityInput || !quantityInput.value) {
+        if (costInput) costInput.value = 'Rp 0';
+        updateTotalCost();
+        return;
+    }
 
-            row.classList.add('removing');
+    const selectedOption = select.options[select.selectedIndex];
+    const price = parseFloat(selectedOption.dataset.price) || 0;
+    const quantity = parseFloat(quantityInput.value) || 0;
+    const stock = parseFloat(selectedOption.dataset.stock) || 0;
 
-            setTimeout(function() {
-                row.remove();
-                reindexRows();
-                calculateTotal();
-                updateIngredientCount();
-                checkEmptyState();
-                showToast('success', 'Bahan dihapus');
-                console.log('Row removed. Remaining:', document.querySelectorAll('.ingredient-row').length);
-            }, 300);
+    if (quantity > stock) {
+        alert(`Stok tidak mencukupi! Stok tersedia: ${stock} ${selectedOption.dataset.unit}`);
+        quantityInput.value = stock;
+        quantityInput.focus();
+    }
+
+    const cost = price * quantity;
+    costInput.value = 'Rp ' + cost.toLocaleString('id-ID');
+
+    updateTotalCost();
+}
+
+function updateTotalCost() {
+    let totalCost = 0;
+    const menuType = document.getElementById('type').value;
+
+    for (let i = 0; i < ingredientCount; i++) {
+        const costInput = document.getElementById(`cost-${i}`);
+        if (costInput) {
+            const costText = costInput.value.replace('Rp ', '').replace(/\./g, '');
+            const cost = parseFloat(costText) || 0;
+            totalCost += cost;
         }
+    }
 
-        function reindexRows() {
-            const rows = document.querySelectorAll('.ingredient-row');
-            let newIndex = 0;
+    document.getElementById('total-cost').textContent = 'Rp ' + totalCost.toLocaleString('id-ID');
 
-            rows.forEach(function(row) {
-                row.setAttribute('data-index', newIndex);
+    const priceInput = document.getElementById('price');
+    const menuPrice = parseFloat(priceInput.value) || 0;
+    document.getElementById('menu-price-display').textContent = 'Rp ' + menuPrice.toLocaleString('id-ID');
 
-                const select = row.querySelector('.ingredient-select');
-                if (select) select.setAttribute('name', `ingredients[${newIndex}][id]`);
+    const profit = menuPrice - totalCost;
+    const profitElement = document.getElementById('profit-display');
 
-                const quantity = row.querySelector('.quantity-input');
-                if (quantity) quantity.setAttribute('name', `ingredients[${newIndex}][quantity]`);
+    if (menuType === 'sauce') {
+        profitElement.textContent = '-';
+        profitElement.classList.remove('text-green-600', 'text-red-600');
+        profitElement.classList.add('text-gray-400');
+    } else {
+        profitElement.textContent = 'Rp ' + profit.toLocaleString('id-ID');
 
-                newIndex++;
-            });
-
-            ingredientCounter = newIndex;
-            console.log('Rows reindexed. New counter:', ingredientCounter);
+        if (profit >= 0) {
+            profitElement.classList.remove('text-red-600', 'text-gray-400');
+            profitElement.classList.add('text-green-600');
+        } else {
+            profitElement.classList.remove('text-green-600', 'text-gray-400');
+            profitElement.classList.add('text-red-600');
         }
+    }
+}
 
-        function updateIngredientRow(element) {
-            const row = element.closest('.ingredient-row');
-            if (!row) return;
+function previewImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const container = document.getElementById('imagePreviewContainer');
+            const existingImg = document.getElementById('imagePreview');
 
-            const select = row.querySelector('.ingredient-select');
-            const quantity = row.querySelector('.quantity-input');
-            const unitDisplay = row.querySelector('.unit-display');
-            const subtotalDisplay = row.querySelector('.subtotal-display');
-
-            if (!select || !quantity || !unitDisplay || !subtotalDisplay) return;
-
-            const selectedOption = select.options[select.selectedIndex];
-
-            if (!selectedOption || !selectedOption.value) {
-                unitDisplay.textContent = 'unit';
-                subtotalDisplay.textContent = 'Rp 0';
-                return;
+            if (existingImg) {
+                existingImg.src = e.target.result;
+            } else if (container) {
+                container.innerHTML = `<img id="imagePreview" src="${e.target.result}" class="h-32 w-32 object-cover rounded-lg">`;
             }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
 
-            const price = parseFloat(selectedOption.dataset.price) || 0;
-            const unit = selectedOption.dataset.unit || 'unit';
-            const qty = parseFloat(quantity.value) || 0;
-
-            unitDisplay.textContent = unit;
-            subtotalDisplay.textContent = 'Rp ' + Math.round(price * qty).toLocaleString('id-ID');
-
-            calculateTotal();
-        }
-
-        // ================ CALCULATION FUNCTIONS ================
-        function calculateTotal() {
-            let totalCost = 0;
-            const rows = document.querySelectorAll('.ingredient-row');
-
-            rows.forEach(function(row) {
-                const select = row.querySelector('.ingredient-select');
-                const quantity = row.querySelector('.quantity-input');
-
-                if (select && quantity && select.value) {
-                    const selectedOption = select.options[select.selectedIndex];
-                    if (selectedOption) {
-                        const price = parseFloat(selectedOption.dataset.price) || 0;
-                        const qty = parseFloat(quantity.value) || 0;
-                        totalCost += price * qty;
-                    }
-                }
-            });
-
-            const price = parseFloat(document.getElementById('price').value) || 0;
-            const profit = price - totalCost;
-
-            document.getElementById('totalCostDisplay').textContent = 'Rp ' + Math.round(totalCost).toLocaleString('id-ID');
-            document.getElementById('priceDisplay').textContent = 'Rp ' + Math.round(price).toLocaleString('id-ID');
-
-            const profitDisplay = document.getElementById('profitDisplay');
-            profitDisplay.textContent = 'Rp ' + Math.round(profit).toLocaleString('id-ID');
-
-            const profitContainer = document.getElementById('profitContainer');
-            if (profit < 0) {
-                profitContainer.className = 'bg-red-50 p-5 rounded-xl border border-red-200';
-                profitDisplay.className = 'text-2xl font-bold text-red-900';
-            } else {
-                profitContainer.className = 'bg-green-50 p-5 rounded-xl border border-green-200';
-                profitDisplay.className = 'text-2xl font-bold text-green-900';
-            }
-        }
-
-        function updateIngredientCount() {
-            const count = document.querySelectorAll('.ingredient-row').length;
-            const countElement = document.getElementById('ingredientCount');
-            if (countElement) countElement.textContent = count;
-        }
-
-        function checkEmptyState() {
-            const rows = document.querySelectorAll('.ingredient-row');
-            const emptyState = document.getElementById('emptyIngredientsState');
-            if (emptyState) {
-                emptyState.classList.toggle('hidden', rows.length > 0);
-            }
-        }
-
-        // ================ TOAST NOTIFICATION ================
-        function showToast(type, message) {
-            if (typeof Toastify === 'undefined') {
-                alert(message);
-                return;
-            }
-
-            Toastify({
-                text: message,
-                duration: 3000,
-                close: true,
-                gravity: "top",
-                position: "right",
-                backgroundColor: type === 'success' ? '#10B981' : '#EF4444',
-                stopOnFocus: true
-            }).showToast();
-        }
-
-        // ================ FORM VALIDATION ================
-        document.getElementById('menuForm').addEventListener('submit', function(e) {
-            const rows = document.querySelectorAll('.ingredient-row');
-
-            if (rows.length === 0) {
-                e.preventDefault();
-                showToast('error', 'Minimal satu bahan harus ditambahkan');
-                return false;
-            }
-
-            let valid = true;
-            rows.forEach(function(row) {
-                const select = row.querySelector('.ingredient-select');
-                const quantity = row.querySelector('.quantity-input');
-
-                row.classList.remove('border-red-500', 'border-2');
-
-                if (!select || !select.value) {
-                    valid = false;
-                    row.classList.add('border-red-500', 'border-2');
-                }
-
-                if (!quantity || !quantity.value || parseFloat(quantity.value) <= 0) {
-                    valid = false;
-                    row.classList.add('border-red-500', 'border-2');
-                }
-            });
-
-            if (!valid) {
-                e.preventDefault();
-                showToast('error', 'Semua bahan harus diisi dengan valid');
-                return false;
-            }
-
-            return true;
-        });
-    </script>
+function removeImage() {
+    const img = document.getElementById('imagePreview');
+    if (img) {
+        img.remove();
+    }
+    document.getElementById('image').value = '';
+    document.getElementById('removeImageInput').value = '1';
+}
+</script>
 @endpush
