@@ -157,6 +157,10 @@ class MenuController extends Controller
 
     public function show(Menu $menu)
     {
+        if (!$menu->exists || !$menu->getKey()) {
+            abort(404, 'Menu tidak ditemukan.');
+        }
+
         $menu->load([
             'ingredients',
             'availableSauces', // Ini akan memuat relasi tanpa additional_price
