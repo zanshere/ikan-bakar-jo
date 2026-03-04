@@ -209,7 +209,7 @@ class SaleController extends Controller
 
         $validator = Validator::make($request->all(), [
             'payment_method' => 'required|in:cash,transfer',
-            'cash_received' => 'required_if:payment_method,cash|numeric|min:0',
+            'cash_received' => 'exclude_unless:payment_method,cash|required|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -538,11 +538,11 @@ class SaleController extends Controller
 
         $validator = Validator::make($request->all(), [
             'payment_method' => 'required|in:cash,transfer',
-            'cash_received' => 'required_if:payment_method,cash|numeric|min:0',
+            'cash_received' => 'exclude_unless:payment_method,cash|required|numeric|min:0',
         ], [
             'payment_method.required' => 'Metode pembayaran harus dipilih',
             'payment_method.in' => 'Metode pembayaran tidak valid',
-            'cash_received.required_if' => 'Jumlah uang diterima harus diisi untuk pembayaran tunai',
+            'cash_received.required' => 'Jumlah uang diterima harus diisi untuk pembayaran tunai',
             'cash_received.numeric' => 'Jumlah uang diterima harus berupa angka',
             'cash_received.min' => 'Jumlah uang diterima tidak boleh kurang dari 0',
         ]);
