@@ -112,7 +112,7 @@
             Proses Pembayaran
         </h3>
 
-        <form action="{{ route('sales.mark-as-paid', $sale) }}" method="POST" class="space-y-4">
+        <form id="paymentForm" action="{{ route('sales.mark-as-paid', $sale) }}" method="POST" class="space-y-4">
             @csrf
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -122,10 +122,10 @@
                     </label>
                     <select name="payment_method" id="payment_method" required
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                            onchange="toggleCashField()">
+                            onchange="toggleCashField(true)">
                         <option value="">Pilih Metode</option>
                         <option value="cash" {{ old('payment_method') == 'cash' ? 'selected' : '' }}>Tunai</option>
-                        <option value="transfer" {{ old('payment_method') == 'transfer' ? 'selected' : '' }}>Transfer Bank</option>
+                        <option value="transfer" {{ old('payment_method') == 'transfer' ? 'selected' : '' }}>Transfer Bank (EDC Otomatis)</option>
                     </select>
                 </div>
 
@@ -143,6 +143,12 @@
                 </div>
             </div>
 
+            <div id="transfer_info_field" class="{{ old('payment_method') == 'transfer' ? '' : 'hidden' }}">
+                <div class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+                    Pembayaran transfer via device EDC diproses otomatis saat metode dipilih.
+                </div>
+            </div>
+
             <div class="bg-blue-50 p-4 rounded-lg">
                 <div class="flex justify-between items-center">
                     <span class="font-medium text-gray-700">Total yang Harus Dibayar:</span>
@@ -154,7 +160,7 @@
                 <button type="submit"
                         class="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
                     <i data-lucide="check-circle" class="w-4 h-4 mr-2"></i>
-                    Konfirmasi Pembayaran
+                    Proses Pembayaran
                 </button>
             </div>
         </form>
@@ -458,19 +464,32 @@
 
 @push('scripts')
 <script>
-function toggleCashField() {
+function toggleCashField(shouldAutoSubmit = false) {
     const paymentMethod = document.getElementById('payment_method').value;
     const cashField = document.getElementById('cash_received_field');
+    const transferInfoField = document.getElementById('transfer_info_field');
     const cashInput = document.getElementById('cash_received');
 
     if (paymentMethod === 'cash') {
         cashField.classList.remove('hidden');
+        transferInfoField.classList.add('hidden');
         cashInput.required = true;
-    } else {
-        cashField.classList.add('hidden');
-        cashInput.required = false;
-        cashInput.value = '';
+        return;
     }
+
+    cashField.classList.add('hidden');
+    cashInput.required = false;
+    cashInput.value = '';
+
+    if (paymentMethod === 'transfer') {
+        transferInfoField.classList.remove('hidden');
+        if (shouldAutoSubmit) {
+            document.getElementById('paymentForm').submit();
+        }
+        return;
+    }
+
+    transferInfoField.classList.add('hidden');
 }
 
 // Initialize on page load

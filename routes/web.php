@@ -51,15 +51,18 @@ Route::middleware('auth')->group(function () {
             Route::get('/create', [MenuController::class, 'create'])->name('create');
             Route::post('/', [MenuController::class, 'store'])->name('store');
             Route::get('/get/details', [MenuController::class, 'getMenuDetails'])->name('get.details');
-            Route::get('/{menu}/edit', [MenuController::class, 'edit'])->name('edit');
-            Route::put('/{menu}', [MenuController::class, 'update'])->name('update');
-            Route::delete('/{menu}', [MenuController::class, 'destroy'])->name('destroy');
-            Route::post('/{menu}/toggle-status', [MenuController::class, 'toggleStatus'])->name('toggle-status');
-            Route::get('/{menu}/manage-sauces', [MenuController::class, 'manageSauces'])->name('manage-sauces');
-            Route::post('/{menu}/update-sauces', [MenuController::class, 'updateSauces'])->name('update-sauces');
+
+            Route::whereNumber('menu')->group(function () {
+                Route::get('/{menu}/edit', [MenuController::class, 'edit'])->name('edit');
+                Route::put('/{menu}', [MenuController::class, 'update'])->name('update');
+                Route::delete('/{menu}', [MenuController::class, 'destroy'])->name('destroy');
+                Route::post('/{menu}/toggle-status', [MenuController::class, 'toggleStatus'])->name('toggle-status');
+                Route::get('/{menu}/manage-sauces', [MenuController::class, 'manageSauces'])->name('manage-sauces');
+                Route::post('/{menu}/update-sauces', [MenuController::class, 'updateSauces'])->name('update-sauces');
+            });
         });
 
-        Route::get('/{menu}', [MenuController::class, 'show'])->name('show'); // Detail Menu (untuk semua user)
+        Route::get('/{menu}', [MenuController::class, 'show'])->whereNumber('menu')->name('show'); // Detail Menu (untuk semua user)
     });
 
     // ==================== INGREDIENT MANAGEMENT ====================
