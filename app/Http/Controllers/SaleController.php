@@ -584,8 +584,12 @@ class SaleController extends Controller
                 'processed_by' => Auth::id()
             ]);
 
+            $successMessage = $request->payment_method === 'transfer'
+                ? 'Pembayaran transfer berhasil diproses otomatis melalui device EDC. Status pesanan telah diperbarui menjadi Lunas.'
+                : 'Pembayaran tunai berhasil diproses. Status pesanan telah diperbarui menjadi Lunas.';
+
             return redirect()->route('sales.show', $sale)
-                ->with('success', 'Pembayaran berhasil diproses. Status pesanan telah diperbarui menjadi Lunas.');
+                ->with('success', $successMessage);
         } catch (\Exception $e) {
             DB::rollBack();
 
