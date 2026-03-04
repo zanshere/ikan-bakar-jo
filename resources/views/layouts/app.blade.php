@@ -115,6 +115,9 @@
             <nav class="p-4 space-y-1">
                 @if (Auth::user()->isOwner())
                     {{-- NAVIGASI UNTUK OWNER --}}
+                    @php
+                        $pendingOrderCount = \App\Models\Order::where('status', 'pending')->count();
+                    @endphp
 
                     <!-- Dashboard -->
                     <a href="{{ route('dashboard') }}"
@@ -147,9 +150,16 @@
 
                     <!-- Sales Management (Kelola Pesanan) -->
                     <a href="{{ route('sales.index') }}"
-                        class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 {{ request()->routeIs('sales.*') ? 'active' : '' }}">
-                        <i data-lucide="shopping-cart" class="w-5 h-5"></i>
-                        <span>Kelola Pesanan</span>
+                        class="sidebar-link flex items-center justify-between px-4 py-3 rounded-lg text-gray-700 {{ request()->routeIs('sales.*') ? 'active' : '' }}">
+                        <span class="flex items-center space-x-3">
+                            <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+                            <span>Kelola Pesanan</span>
+                        </span>
+                        @if ($pendingOrderCount > 0)
+                            <span class="py-0.5 px-2 inline-flex items-center gap-x-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">
+                                {{ $pendingOrderCount }}
+                            </span>
+                        @endif
                     </a>
 
                     <!-- Restocks -->
